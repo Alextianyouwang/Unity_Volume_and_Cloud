@@ -1,0 +1,11 @@
+
+#pragma kernel CS_CloudVoxel
+
+
+RWStructuredBuffer<int> _voxel;
+
+[numthreads(128,1,1)]
+void CS_CloudVoxel (uint3 id : SV_DispatchThreadID)
+{
+   _voxel[id.x];
+}

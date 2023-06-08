@@ -1,0 +1,177 @@
+
+#pragma kernel CS_DrawSmoke
+RWTexture2D<float4> _CloudColRT,_CloudMaskRT,_CloudDepthRT,_CloudAlphaRT;
+
+float _ScreenWidth,_ScreenHeight;
+float4x4 _CamInvProjection, _CamToWorld , _Unity_VP;
+float3 _CamPosWS;
+float3 _SphereCenter;
+float _SphereRadius;
+float _BlendFactor;
+
+float3 _LightDirection;
+
+
+
+struct Sphere
+{
+    float3 center;
+    float radius;
+};
+StructuredBuffer<Sphere> _SphereBuffer;
+int _SphereCount;
+
+
+static const float maxDist = 30;
+static const float epsilon = 0.001;
+
+struct Ray
+{
+    float3 origin;
+    float3 direction;
+};
+
+Ray CreateRay(float3 _origin, float3 _direction)
+{
+    Ray ray;
+    ray.origin = _origin;
+    ray.direction = _direction;
+    return ray;
+}
+Ray ComputeCameraRay (float2 uv)
+{
+    
+    float3 direction = mul (_CamInvProjection,float4 (uv,0,1)).xyz;
+    direction = mul (_CamToWorld,float4 (direction,0)).xyz;
+    direction = normalize(direction);
+    return  CreateRay(_CamPosWS,direction);
+}
+
+struct SceneInfo
+{
+    float3 position;
+    float3 normal;
+    float rayDepth;
+    int marchStep;
+    float alpha;
+};
+
+SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int marchStep, float alpha)
+{
+    SceneInfo sceneInfo;
+    sceneInfo.position = position;
+    sceneInfo.normal = normal;
+    sceneInfo.rayDepth = rayDepth;
+    sceneInfo.marchStep = marchStep;
+    sceneInfo.alpha = alpha;
+    return sceneInfo;
+}
+
+float Blend( float a, float b, float k )
+{
+    float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+    const float blendDst = lerp( b, a, h ) - k*h*(1.0-h);
+    return blendDst;
+}
+
+float Spheres (float3 pos)
+{
+    float globalDist = maxDist;
+    
+    for (int i = 0; i<_SphereCount; i ++)
+    {
+        const float localDist = distance(pos,_SphereBuffer[i].center) - _SphereBuffer[i].radius;
+        globalDist = Blend(localDist,globalDist,_BlendFactor) ;
+    }
+    return globalDist;
+}
+float SDF (float3 pos)
+{
+    //return distance(pos,_SphereCenter) - _SphereRadius;
+    return  Spheres(pos);
+}
+float3 GetNormal(float3 pos)
+{
+    float2 e = float2(0,0.001);
+    float x = SDF(pos + e.yxx);
+    float y = SDF(pos + e.xyx);
+    float z = SDF(pos + e.xxy);
+    return normalize( float3 (x,y,z) - SDF(pos));
+}
+
+float RayDepthRender (inout float3 pos,float3 d, int insideObject, inout int stepsMax)
+{
+    
+    float rayDist = 0;
+    insideObject = insideObject * 2 -1;
+    pos +=  -GetNormal(pos)* insideObject * epsilon *50;
+    const int steps = stepsMax;
+    for (int i = 0; i< steps; i++)
+    {
+        pos += d * rayDist;
+        const float distToSDF = -SDF(pos)*insideObject;
+        if ( distToSDF <= epsilon)
+        {
+            stepsMax -= i;
+            break;
+        }
+                    
+        rayDist += insideObject==1? 0.01:0.01;
+        //rayDist += insideObject==1? distToSDF:0.01;
+    }
+     pos += GetNormal(pos)*insideObject * epsilon *50;
+    return  rayDist;
+}
+SceneInfo RenderSceneInfo(float3 o, float3 d)
+{
+    
+    float rayDist  = 0;
+    int marchStep = 0;
+    while ( rayDist < maxDist)
+    {
+        marchStep ++;
+        const float3 pos = o + d * rayDist;
+        //const float distToObject =SDF(_CamPosWS)>0?  SDF(pos):-SDF(pos);
+        const float distToObject =SDF(pos);
+        if (distToObject <= epsilon)
+        {
+            float3 finalPos = pos;
+            int depthRenderSteps = 30;;
+            float alpha = RayDepthRender(finalPos,d,1, depthRenderSteps);
+            for (int i = 0 ; i< 2; i++)
+            {
+                RayDepthRender(finalPos,d,0,depthRenderSteps);
+                alpha = max(alpha,RayDepthRender(finalPos,d,1,depthRenderSteps)) ;
+            }
+               
+                return CreateSceneInfo(pos, -GetNormal(pos),SDF(_CamPosWS)>0? rayDist:-rayDist+0.001,marchStep, alpha);
+        }
+        
+        rayDist += distToObject;
+    }
+        return CreateSceneInfo(0,0,0,marchStep,0);
+}
+
+
+
+[numthreads(8,8,1)]
+void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
+{
+    const Ray camRay = ComputeCameraRay(float2 (id.x/_ScreenWidth,id.y/_ScreenHeight) * 2 -1);
+    const SceneInfo sceneInfo = RenderSceneInfo(camRay.origin,camRay.direction);
+    const float4 clipPos = mul (_Unity_VP,float4(sceneInfo.position,1));
+    const float sceneMask = sceneInfo.rayDepth > 0 ? 1 : 0;
+    
+    float3 diffuse = saturate( dot(sceneInfo.normal,_LightDirection))/2 + 0.5f;
+    _CloudColRT[id.xy] = float4 (sceneInfo.position,1);
+    _CloudColRT[id.xy] = sceneInfo.marchStep * 0.01;
+    _CloudColRT[id.xy] = float4 (-sceneInfo.normal,1);
+    _CloudColRT[id.xy] = sceneInfo.alpha*3;
+    _CloudAlphaRT[id.xy] = sceneInfo.alpha*4;
+    //_CloudColRT[id.xy] = float4 (diffuse,1);
+
+    //_CloudColRT[id.xy] = float4 (camRay.direction,1);
+    _CloudMaskRT[id.xy] = sceneMask;
+    //_CloudMaskRT[id.xy] = 1;
+    _CloudDepthRT[id.xy] = clipPos.z/ (clipPos.w+0.0001);
+}
