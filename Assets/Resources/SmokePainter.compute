@@ -152,9 +152,10 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         if (distToObject <= epsilon)
         {
             hitPos = throughPos;
-            const float stepSize = 0.025;
+            const float stepSize = 0.05;
             float3 newO = throughPos - GetNormal(throughPos) * epsilon*4;
-            for (int i = 0 ; i< 200; i++)
+            float snappingOffset = 0;
+            for (int i = 0 ; i< 100; i++)
             {
                 throughPos = newO + d * throughDist;
                 float distToCenter = 10000;
@@ -165,13 +166,16 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
                 float alphaScale = smoothstep(0.9,0.5 , distToCenter);
                 float noise = fbm(throughPos);
                 const float distToBound = SDF(throughPos);
-                if ((hitDist + throughDist) * pf > geoDepth)
-                    break;
+                if ((hitDist + throughDist) * pf > geoDepth) 
+                    snappingOffset = stepSize - ((hitDist + throughDist) * pf - geoDepth);
+
                 if (distToBound < 0)
-                    alpha += stepSize * alphaScale * fbm(throughPos * 5) * 2;
+                    alpha += (stepSize + snappingOffset) * alphaScale * fbm(throughPos * 5) * 5; 
+
+                if (snappingOffset > 0)
+                    break;
                 throughDist += stepSize;
             }   
-            
             return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, alpha);
         }
         hitDist += distToObject;
@@ -213,7 +217,7 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
     const float sceneAlpha = sceneInfo.alpha;
     
     float3 diffuse = saturate( dot(sceneInfo.normal,_LightDirection))/2 + 0.5f;
-    _CloudColRT[id.xy] = float4 (1,1,1, sceneAlpha) *(sceneDepthNDC > geometryDepthNDC);
+    _CloudColRT[id.xy] = float4 (0,0,0, sceneAlpha) *(sceneDepthNDC > geometryDepthNDC);
    // _CloudColRT[id.xy] = float4 (posCS.www, sceneAlpha);
 
 
