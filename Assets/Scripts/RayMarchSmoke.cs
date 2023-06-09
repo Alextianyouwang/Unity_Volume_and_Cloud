@@ -40,7 +40,6 @@ public class RayMarchSmoke : MonoBehaviour
 
     private void CreateTexture(int width, int height)
     {
-        depthBuffer = new CommandBuffer();
         depthTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
         
 
@@ -78,7 +77,10 @@ public class RayMarchSmoke : MonoBehaviour
         CheckResolution();
         Matrix4x4 camProj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
 
-    
+        depthBuffer = new CommandBuffer();
+        depthBuffer.Blit(BuiltinRenderTextureType.Depth, depthTexture);
+        Graphics.ExecuteCommandBuffer(depthBuffer);
+        depthBuffer.Release();
 
         smokePainter.SetFloat( "_ScreenWidth",screenW);
         smokePainter.SetFloat("_ScreenHeight",screenH);
@@ -93,8 +95,6 @@ public class RayMarchSmoke : MonoBehaviour
 
 
 
-        depthBuffer.Blit(BuiltinRenderTextureType.Depth, depthTexture);
-        Graphics.ExecuteCommandBuffer(depthBuffer);
         smokePainter.SetTexture(0, "_DepthTextureRT", depthTexture);
         smokePainter.SetTexture(0,"_CloudColRT",cloudCol);
         smokePainter.SetTexture(0,"_CloudMaskRT",cloudMask);
