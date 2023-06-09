@@ -3,20 +3,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
+using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
 
 public class RayMarchSmoke : MonoBehaviour
 {
     private ComputeShader smokePainter;
-    private RenderTexture cloudCol,cloudMask,cloudDepth,cloudAlpha;
+    private CommandBuffer depthBuffer;
+    private RenderTexture cloudCol,cloudMask,cloudDepth,cloudAlpha,depthTexture;
     private Material composite;
     private int screenW, screenH;
     private Camera cam;
     private CloudDrawer drawer;
 
     private Light mainLight;
-    public GameObject testSphere,testSphere2;
 
     [Range(0, 1)] public float blendFactor = 0.5f;
     
@@ -39,6 +40,10 @@ public class RayMarchSmoke : MonoBehaviour
 
     private void CreateTexture(int width, int height)
     {
+        depthBuffer = new CommandBuffer();
+        depthTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        
+
         cloudCol = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.Linear);
         cloudCol.enableRandomWrite = true;
         cloudCol.Create();
@@ -70,31 +75,27 @@ public class RayMarchSmoke : MonoBehaviour
     
     private void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
-        if (!testSphere || !testSphere2)
-        {
-            Graphics.Blit(src,dest);
-            return;
-        }
-
-        Vector3 testPos = testSphere.transform.position;
-        float testRadius = testSphere.transform.localScale.x;
         CheckResolution();
         Matrix4x4 camProj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
-       
+
+    
+
         smokePainter.SetFloat( "_ScreenWidth",screenW);
         smokePainter.SetFloat("_ScreenHeight",screenH);
         smokePainter.SetMatrix( "_CamInvProjection",camProj.inverse);
         smokePainter.SetMatrix( "_CamToWorld",cam.cameraToWorldMatrix);
         smokePainter.SetMatrix( "_Unity_VP",camProj * cam.worldToCameraMatrix);
+        smokePainter.SetMatrix( "_Unity_V",cam.worldToCameraMatrix);
         smokePainter.SetVector("_CamPosWS",cam.transform.position);
-        smokePainter.SetVector("_SphereCenter",new Vector4(testPos.x,testPos.y,testPos.z,0));
-        smokePainter.SetFloat("_SphereRadius",testRadius/2);
         smokePainter.SetVector("_LightDirection", mainLight.transform.forward);
         smokePainter.SetFloat("_BlendFactor",blendFactor);
+        smokePainter.SetVector("_CameraNearFar",new Vector2 (cam.nearClipPlane,cam.farClipPlane));
 
-       
 
-        
+
+        depthBuffer.Blit(BuiltinRenderTextureType.Depth, depthTexture);
+        Graphics.ExecuteCommandBuffer(depthBuffer);
+        smokePainter.SetTexture(0, "_DepthTextureRT", depthTexture);
         smokePainter.SetTexture(0,"_CloudColRT",cloudCol);
         smokePainter.SetTexture(0,"_CloudMaskRT",cloudMask);
         smokePainter.SetTexture(0,"_CloudDepthRT",cloudDepth);
@@ -117,8 +118,13 @@ public class RayMarchSmoke : MonoBehaviour
     }
 
     private void OnDisable()
-    { 
+    {
+        
+        depthTexture.Release();
+        
         cloudCol.Release();
         cloudMask.Release();
+        cloudDepth.Release();
+        cloudAlpha.Release();
     }
 }
