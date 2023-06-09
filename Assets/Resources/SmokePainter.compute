@@ -76,6 +76,8 @@ float Blend( float a, float b, float k )
     return blendDst;
 }
 
+
+
 float Spheres (float3 pos)
 {
     float globalDist = maxDist;
@@ -115,16 +117,17 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         if (distToObject <= epsilon)
         {
             hitPos = throughPos;
-            const float3 newO = throughPos - GetNormal(throughPos) * epsilon*4;
-            for (int i = 0 ; i< 260; i++)
+            const float stepSize = 0.025;
+            float3 newO = throughPos - GetNormal(throughPos) * epsilon*4;
+            for (int i = 0 ; i< 200; i++)
             {
                 throughPos = newO + d * throughDist;
                 const float distToBound = SDF(throughPos);
                 if ((hitDist + throughDist) * pf > geoDepth)
                     break;
                 if (distToBound < 0) 
-                    alpha += 0.02;
-                throughDist += 0.02;
+                    alpha += stepSize;
+                throughDist += stepSize;
             }   
             return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, alpha);
         }
@@ -168,6 +171,7 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
     
     float3 diffuse = saturate( dot(sceneInfo.normal,_LightDirection))/2 + 0.5f;
     _CloudColRT[id.xy] = float4 (diffuse, sceneAlpha) *(sceneDepthNDC > geometryDepthNDC);
+   // _CloudColRT[id.xy] = float4 (posCS.www, sceneAlpha);
 
 
 

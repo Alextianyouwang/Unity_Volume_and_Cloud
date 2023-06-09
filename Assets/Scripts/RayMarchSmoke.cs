@@ -46,7 +46,7 @@ public class RayMarchSmoke : MonoBehaviour
         depthTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
         
 
-        cloudCol = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.Linear);
+        cloudCol = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.sRGB);
         cloudCol.enableRandomWrite = true;
         cloudCol.Create();
         
