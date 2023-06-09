@@ -116,15 +116,15 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         {
             hitPos = throughPos;
             const float3 newO = throughPos - GetNormal(throughPos) * epsilon*4;
-            for (int i = 0 ; i< 120; i++)
+            for (int i = 0 ; i< 260; i++)
             {
                 throughPos = newO + d * throughDist;
                 const float distToBound = SDF(throughPos);
                 if ((hitDist + throughDist) * pf > geoDepth)
                     break;
                 if (distToBound < 0) 
-                    alpha += 0.05;
-                throughDist += 0.05;
+                    alpha += 0.02;
+                throughDist += 0.02;
             }   
             return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, alpha);
         }

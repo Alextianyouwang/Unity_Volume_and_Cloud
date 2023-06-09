@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Rendering;
 
-[ExecuteInEditMode]
+//[ExecuteInEditMode]
 
 public class RayMarchSmoke : MonoBehaviour
 {
@@ -18,6 +18,9 @@ public class RayMarchSmoke : MonoBehaviour
     private CloudDrawer drawer;
 
     private Light mainLight;
+
+    private int downScaleFactor = 2;
+
 
     [Range(0, 1)] public float blendFactor = 0.5f;
     
@@ -34,8 +37,8 @@ public class RayMarchSmoke : MonoBehaviour
         composite = new Material(Shader.Find("Hidden/S_Composit"));
         smokePainter = (ComputeShader)Resources.Load("SmokePainter");
         mainLight = GameObject.Find("Directional Light").GetComponent<Light>();
-        screenW = Screen.width;
-        screenH = Screen.height;
+        screenW = Screen.width/ downScaleFactor;
+        screenH = Screen.height/ downScaleFactor;
     }
 
     private void CreateTexture(int width, int height)
@@ -63,10 +66,10 @@ public class RayMarchSmoke : MonoBehaviour
 
     private void CheckResolution()
     {
-        if (screenH != cam.pixelHeight || screenW != cam.pixelWidth)
+        if (screenH != Screen.height / downScaleFactor || screenW != Screen.width / downScaleFactor)
         {
-            screenW = Screen.width;
-            screenH = Screen.height;
+            screenW = Screen.width/downScaleFactor;
+            screenH = Screen.height/downScaleFactor;
             CreateTexture(screenW,screenH);
         }
     }
