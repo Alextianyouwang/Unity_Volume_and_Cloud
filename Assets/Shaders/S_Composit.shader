@@ -83,7 +83,7 @@ Shader "Hidden/S_Composit"
                 fixed4 cloud = tex2D(_CloudCol, i.uv);
                 const float  cloudAlpha= tex2D(_CloudAlpha,i.uv);
                 cloud.a = 1;
-                //cloud.a = cloudAlpha;
+                cloud.a = cloudAlpha;
                 const float sceneDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture,i.uv);
                 const float cloudDepth = tex2D(_CloudDepth,i.uv);
                 const fixed4 cloudMask = tex2D(_CloudMask,i.uv);

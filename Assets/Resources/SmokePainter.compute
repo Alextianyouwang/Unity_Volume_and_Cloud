@@ -99,29 +99,6 @@ float3 GetNormal(float3 pos)
     return normalize( float3 (x,y,z) - SDF(pos));
 }
 
-float RayDepthRender (inout float3 pos,float3 d, int insideObject, inout int stepsMax)
-{
-    
-    float rayDist = 0;
-    insideObject = insideObject * 2 -1;
-    pos +=  -GetNormal(pos)* insideObject * epsilon *50;
-    const int steps = stepsMax;
-    for (int i = 0; i< steps; i++)
-    {
-        pos += d * rayDist;
-        const float distToSDF = -SDF(pos)*insideObject;
-        if ( distToSDF <= epsilon)
-        {
-            stepsMax -= i;
-            break;
-        }
-                    
-        rayDist += insideObject==1? 0.01:0.01;
-        //rayDist += insideObject==1? distToSDF:0.01;
-    }
-     pos += GetNormal(pos)*insideObject * epsilon *50;
-    return  rayDist;
-}
 SceneInfo RenderSceneInfo(float3 o, float3 d)
 {
     
@@ -131,17 +108,19 @@ SceneInfo RenderSceneInfo(float3 o, float3 d)
     {
         marchStep ++;
         const float3 pos = o + d * rayDist;
-        //const float distToObject =SDF(_CamPosWS)>0?  SDF(pos):-SDF(pos);
         const float distToObject =SDF(pos);
         if (distToObject <= epsilon)
         {
-            float3 finalPos = pos;
-            int depthRenderSteps = 30;;
-            float alpha = RayDepthRender(finalPos,d,1, depthRenderSteps);
-            for (int i = 0 ; i< 2; i++)
+            float dist = 0;
+            float alpha = 0;
+            float3 rayPos = pos - GetNormal(pos) * epsilon*4;
+            for (int i = 0 ; i< 40; i++)
             {
-                RayDepthRender(finalPos,d,0,depthRenderSteps);
-                alpha = max(alpha,RayDepthRender(finalPos,d,1,depthRenderSteps)) ;
+                rayPos += d * dist;
+                const float distToBound = SDF(rayPos);
+                if (distToBound<0)
+                    alpha += 0.01;
+                dist += 0.01; 
             }
                
                 return CreateSceneInfo(pos, -GetNormal(pos),SDF(_CamPosWS)>0? rayDist:-rayDist+0.001,marchStep, alpha);
@@ -167,8 +146,8 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
     _CloudColRT[id.xy] = sceneInfo.marchStep * 0.01;
     _CloudColRT[id.xy] = float4 (-sceneInfo.normal,1);
     _CloudColRT[id.xy] = sceneInfo.alpha*3;
-    _CloudAlphaRT[id.xy] = sceneInfo.alpha*4;
-    //_CloudColRT[id.xy] = float4 (diffuse,1);
+    _CloudAlphaRT[id.xy] = sceneInfo.alpha*5;
+    _CloudColRT[id.xy] = float4 (diffuse,1);
 
     //_CloudColRT[id.xy] = float4 (camRay.direction,1);
     _CloudMaskRT[id.xy] = sceneMask;
