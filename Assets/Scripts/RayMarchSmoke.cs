@@ -19,7 +19,7 @@ public class RayMarchSmoke : MonoBehaviour
 
     private Light mainLight;
 
-    private int downScaleFactor = 2;
+    private int downScaleFactor = 4;
 
 
     [Range(0, 1)] public float blendFactor = 0.5f;

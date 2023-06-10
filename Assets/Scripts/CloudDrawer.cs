@@ -45,7 +45,7 @@ public class CloudDrawer : MonoBehaviour
             {
                 time += Time.deltaTime;
                 float percent = time / endTime;
-                sphere.radius = animationCurve.Evaluate(percent);
+                sphere.radius = animationCurve.Evaluate(percent) * targetRadius;
                 await Task.Yield();
             }
           
@@ -80,7 +80,7 @@ public class CloudDrawer : MonoBehaviour
         cam = GetComponent<Camera>();
         for(int i = 0; i < maxSphereCount; i ++)
         {
-            activeSphereAnims[i] = new SphereAnim(1f,0.1f, sphereRadiusCurve, new Sphere());
+            activeSphereAnims[i] = new SphereAnim(2f,1.5f, sphereRadiusCurve, new Sphere());
         }
         smokePainter = (ComputeShader)Resources.Load("SmokePainter");
         sphereBuffer = new ComputeBuffer(maxSphereCount, sizeof(float) * 4);

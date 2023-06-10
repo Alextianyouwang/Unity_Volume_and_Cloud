@@ -414,7 +414,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d25cd8c499094dc1851e16ae70fae12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  blendFactor: 0.525
+  blendFactor: 0.187
 --- !u!114 &3916277599198498533
 MonoBehaviour:
   m_ObjectHideFlags: 0

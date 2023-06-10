@@ -17,6 +17,7 @@ float3x3 m =float3x3(0.00, 0.80, 0.60,
     -0.80, 0.36, -0.48,
     -0.60, -0.48, 0.64);
 
+#include "UnityCG.cginc"
 
 float hash(float n)
 {
@@ -91,9 +92,10 @@ struct SceneInfo
     float rayDepth;
     int marchStep;
     float alpha;
+    float3 lightCol;
 };
 
-SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int marchStep, float alpha)
+SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int marchStep, float alpha,float3 lightCol)
 {
     SceneInfo sceneInfo;
     sceneInfo.position = position;
@@ -101,6 +103,7 @@ SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int ma
     sceneInfo.rayDepth = rayDepth;
     sceneInfo.marchStep = marchStep;
     sceneInfo.alpha = alpha;
+    sceneInfo.lightCol = lightCol;
     return sceneInfo;
 }
 
@@ -137,12 +140,45 @@ float3 GetNormal(float3 pos)
     return normalize( float3 (x,y,z) - SDF(pos));
 }
 
+float RemapDensity( float3 position) 
+{
+    float distToCenter = 10000;
+    for (int j = 0; j < _SphereCount; j++)
+    {
+        distToCenter = min(distToCenter, distance(position, _SphereBuffer[j].center));
+    }
+    return smoothstep(1.5, -1, distToCenter);
+}
+
+float SampleDensity(float3 position) 
+{
+    float density = fbm(position * 4) * 1;
+    density += fbm(position * 10)*0.5;
+    return density ;
+}
+
+float Lightmarch(float3 position) 
+{
+    float totalDensity = 0;
+    const float stepSize = 0.2;
+    for (int i = 0; i < 3; i++) 
+    {
+        position += -_LightDirection * stepSize;
+        totalDensity +=  SampleDensity(position) * RemapDensity(position) * stepSize ;
+    }
+    return exp(-totalDensity *100);
+}
+
 SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
 {
     float3 hitPos,throughPos = 0;
     float hitDist,throughDist  = 0;
-    float alpha = 0;
+    float density = 0;
+    float transmittance = 1;
+    float3 lightEnergy = 0;
     int marchStep = 0;
+    const float3 lightCol = float3 (1, 1, 0.8);
+    const float3 extCol = float3 (0.2, 0.2, 0.3);
     const float pf = dot(d, -_Unity_V[2].xyz);
     while ( hitDist < maxDist)
     {
@@ -152,54 +188,46 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         if (distToObject <= epsilon)
         {
             hitPos = throughPos;
-            const float stepSize = 0.05;
-            float3 newO = throughPos - GetNormal(throughPos) * epsilon*4;
+            const float stepSize = 0.1;
+            float3 newO = throughPos;// - GetNormal(throughPos) * epsilon*4;
             float snappingOffset = 0;
-            for (int i = 0 ; i< 100; i++)
+            for (int i = 0 ; i< 70; i++)
             {
                 throughPos = newO + d * throughDist;
-                float distToCenter = 10000;
-                for (int j = 0; j < _SphereCount; j++)
+
+        
+                
+                if (density > 0)
                 {
-                   distToCenter = min( distToCenter, distance(throughPos , _SphereBuffer[j].center)) ;
+                    lightEnergy += Lightmarch(throughPos) * density * transmittance * 100 * stepSize;
+                    transmittance *= exp(-density * 100 * stepSize);
+                    if (transmittance <= 0.01)
+                        break;
                 }
-                float alphaScale = smoothstep(0.9,0.5 , distToCenter);
-                float noise = fbm(throughPos);
-                const float distToBound = SDF(throughPos);
-                if ((hitDist + throughDist) * pf > geoDepth) 
+
+                if ((hitDist + throughDist) * pf >= geoDepth) 
                     snappingOffset = stepSize - ((hitDist + throughDist) * pf - geoDepth);
 
-                if (distToBound < 0)
-                    alpha += (stepSize + snappingOffset) * alphaScale * fbm(throughPos * 5) * 5; 
+                if (SDF(throughPos) < 0) 
+                    density += (stepSize + snappingOffset) * RemapDensity(throughPos) * SampleDensity(throughPos);
 
                 if (snappingOffset > 0)
                     break;
+
+              
+             
                 throughDist += stepSize;
             }   
-            return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, alpha);
+    
+            
+            
+            float3 col = lerp(extCol, lightCol, lightEnergy);
+            
+            return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, saturate(density * 100), col);
         }
         hitDist += distToObject;
     }
-    return CreateSceneInfo(0,0,0,marchStep,0);
-}
-
-float LinearEyeDepth(float depth) 
-{
-    float near = _CameraNearFar.x;
-    float far = _CameraNearFar.y;
-    float x, y, z, w;
-
-    x = -1 + far / near;
-    y = 1;
-    z = x / far;
-    w = 1 / far;
-
-   /* x = 1 - far / near;
-    y = far / near;
-    z = x / far;
-    w = y / far;*/
-
-    return 1.0 / (z * depth + w);
+    return CreateSceneInfo(0,0,0,marchStep,0,extCol);
 }
 
 
@@ -217,7 +245,12 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
     const float sceneAlpha = sceneInfo.alpha;
     
     float3 diffuse = saturate( dot(sceneInfo.normal,_LightDirection))/2 + 0.5f;
-    _CloudColRT[id.xy] = float4 (0,0,0, sceneAlpha) *(sceneDepthNDC > geometryDepthNDC);
+   
+    float3 col = sceneInfo.lightCol;
+
+    //_CloudColRT[id.xy] =  float4 (col,sceneAlpha) *(sceneDepthNDC > geometryDepthNDC);
+
+    _CloudColRT[id.xy] =  float4 (col,sceneAlpha);
    // _CloudColRT[id.xy] = float4 (posCS.www, sceneAlpha);
 
 

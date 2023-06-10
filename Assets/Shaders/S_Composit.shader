@@ -47,6 +47,7 @@ Shader "Hidden/S_Composit"
         Pass
         {
             Blend SrcAlpha OneMinusSrcAlpha
+            //BlendOp Screen
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
