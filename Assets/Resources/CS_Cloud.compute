@@ -113,7 +113,7 @@ float RemapDensity( float3 position)
     {
         distToCent = min(distToCent, distance(position, _SphereBuffer[j].center));
     }
-    return   1-smoothstep(-1, GetAnimatedSphereR(),  distToCent);
+    return   1-smoothstep(-1, 1.5,  distToCent);
 }
 
 float SampleDensity(float3 position) 
@@ -129,13 +129,13 @@ float LightMarch(float3 position)
     for (int i = 0; i < 5; i++) 
     {
         const float stepSize = 0.5;
-        if (SDF(position)>0)
-            break; 
+        
         position += -_LightDirection * stepSize;
         
-        const float density = SampleDensity(position) * RemapDensity(position) * stepSize;
-        
-        totalDensity +=  density;
+        if (SDF(position) < 0)
+            totalDensity += SampleDensity(position) * RemapDensity(position) * stepSize;
+        else 
+            totalDensity += 0;
     }
     return exp(-totalDensity *_CloudAbsorbance);
 }
@@ -169,7 +169,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
             float density = 0;
             float transmittance = 1;
             float lightEnergy = 0;
-            for (int i = 0 ; i< 50; i++)
+            for (int i = 0 ; i< 100; i++)
             {
                 const float stepSize = 0.15;
                 if ((hitDist + throughDist) * pf + stepSize > geoDepth)
@@ -182,7 +182,11 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
                
                 throughPos = newO + d * throughDist;
                 CalculateLighting(stepSize,throughPos, density,transmittance,lightEnergy);
-                throughDist += stepSize;
+
+                if (SDF(throughPos) < 0) 
+                    throughDist += stepSize;
+                else
+                    throughDist += stepSize;
             }
 
             throughPos += snappingOffset * d;
