@@ -15,11 +15,14 @@ float3 _LightDirection;
 
 float _BlendFactor;
 
+float _CloudAbsorbance, _LightIntensity, _CloudDensity;
+
 
 struct Sphere
 {
     float3 center;
     float radius;
+    float smooth;
 };
 StructuredBuffer<Sphere> _SphereBuffer;
 int _SphereCount;
@@ -94,21 +97,29 @@ float3 GetNormal(float3 pos)
     float z = SDF(pos + e.xxy);
     return normalize( float3 (x,y,z) - SDF(pos));
 }
-
+float GetAnimatedSphereR()
+{
+    float radius = 10;
+    for (int i = 0; i<_SphereCount; i ++)
+    {
+        radius = min(radius,-SDF(_SphereBuffer[i].center)); 
+    }
+    return  radius;
+}
 float RemapDensity( float3 position) 
 {
-    float distToCenter = 10000;
+    float distToCent = 100;
     for (int j = 0; j < _SphereCount; j++)
     {
-        distToCenter = min(distToCenter, distance(position, _SphereBuffer[j].center));
+        distToCent = min(distToCent, distance(position, _SphereBuffer[j].center));
     }
-    return smoothstep(1.4, 0, distToCenter);
+    return   1-smoothstep(-1, GetAnimatedSphereR(),  distToCent);
 }
 
 float SampleDensity(float3 position) 
 {
-    float density = fbm(position * 4) * 1;
-    density += fbm(position * 10)*0.5;
+    float density = fbm(position ) * 0.5;
+    density += fbm(position * 3)*0.5;
     return density ;
 }
 
@@ -117,21 +128,23 @@ float LightMarch(float3 position)
     float totalDensity = 0;
     for (int i = 0; i < 5; i++) 
     {
-        const float stepSize = 0.15;
+        const float stepSize = 0.5;
+        if (SDF(position)>0)
+            break; 
         position += -_LightDirection * stepSize;
+        
         const float density = SampleDensity(position) * RemapDensity(position) * stepSize;
-        if (density < 0.0001)
-            break;
+        
         totalDensity +=  density;
     }
-    return exp(-totalDensity *200);
+    return exp(-totalDensity *_CloudAbsorbance);
 }
 
 void CalculateLighting(float step, float3 pos, inout float density, inout float transmittance, inout float lightEnergy)
 {
-    density += step * RemapDensity(pos) * SampleDensity(pos);
-    transmittance *= exp(-density * 100 * step);
-    lightEnergy += LightMarch(pos) * density * transmittance * 100 * step;
+    density += max(0,step * RemapDensity(pos) * SampleDensity(pos)) ;
+    transmittance *= exp(-density * _CloudDensity * step);
+    lightEnergy += LightMarch(pos) * density * transmittance * _LightIntensity * step;
 } 
 
 SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
@@ -175,7 +188,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
             throughPos += snappingOffset * d;
             CalculateLighting(snappingOffset,throughPos, density,transmittance,lightEnergy);
             const float3 col = lerp(extCol, lightCol, lightEnergy);
-            return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, saturate(density * 50), col);
+            return CreateSceneInfo(hitPos, -GetNormal(hitPos),SDF(_CamPosWS)>0? hitDist:-hitDist+0.001,marchStep, 1-transmittance, col);
         }
         hitDist += distToObject;
     }

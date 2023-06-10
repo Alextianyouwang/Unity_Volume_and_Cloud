@@ -602,6 +602,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   downScaleFactor: 2
+  cloudDensity: 200
+  cloudAbsorbance: 200
+  lightIntensity: 200
   blendFactor: 0.187
 --- !u!114 &3916277599198498533
 MonoBehaviour:
@@ -615,7 +618,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ee581ca67bb041008bfffdc96ce0c36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSphereCount: 10
+  maxSphereCount: 1
   sphereRadiusCurve:
     serializedVersion: 2
     m_Curve:

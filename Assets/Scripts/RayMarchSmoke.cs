@@ -21,7 +21,16 @@ public class RayMarchSmoke : MonoBehaviour
 
     [Range(1,4)]
     public int downScaleFactor = 2;
-    private int downScaleFactor_local;
+    private int downScaleFactorLocal;
+
+    [Range(0,300)]
+    public float cloudDensity= 200;
+    [Range(0,300)]
+    public float cloudAbsorbance = 200;
+    [Range(0,300)]
+    public float lightIntensity = 200;
+   
+
 
 
     [Range(0, 1)] public float blendFactor = 0.5f;
@@ -39,9 +48,9 @@ public class RayMarchSmoke : MonoBehaviour
         composite = new Material(Shader.Find("Hidden/S_Composite"));
         smokePainter = (ComputeShader)Resources.Load("CS_Cloud");
         mainLight = GameObject.Find("Directional Light").GetComponent<Light>();
-        downScaleFactor_local = downScaleFactor;
-        screenW = Screen.width/ downScaleFactor_local;
-        screenH = Screen.height/ downScaleFactor_local;
+        downScaleFactorLocal = downScaleFactor;
+        screenW = Screen.width/ downScaleFactorLocal;
+        screenH = Screen.height/ downScaleFactorLocal;
         
     }
 
@@ -70,14 +79,14 @@ public class RayMarchSmoke : MonoBehaviour
 
     private void CheckResolution()
     {
-        if (screenH != Screen.height / downScaleFactor_local
-            || screenW != Screen.width / downScaleFactor_local
-            || downScaleFactor_local != downScaleFactor
+        if (screenH != Screen.height / downScaleFactorLocal
+            || screenW != Screen.width / downScaleFactorLocal
+            || downScaleFactorLocal != downScaleFactor
            )
         {
-            downScaleFactor_local = downScaleFactor;
-            screenW = Screen.width/downScaleFactor_local;
-            screenH = Screen.height/downScaleFactor_local;
+            downScaleFactorLocal = downScaleFactor;
+            screenW = Screen.width/downScaleFactorLocal;
+            screenH = Screen.height/downScaleFactorLocal;
             CreateTexture(screenW,screenH);
         }
     }
@@ -102,7 +111,12 @@ public class RayMarchSmoke : MonoBehaviour
         smokePainter.SetVector("_CamPosWS",cam.transform.position);
         smokePainter.SetVector("_LightDirection", mainLight.transform.forward);
         
+        
         smokePainter.SetFloat("_BlendFactor",blendFactor);
+        smokePainter.SetFloat("_CloudAbsorbance",cloudAbsorbance);
+        smokePainter.SetFloat("_LightIntensity",lightIntensity);
+        smokePainter.SetFloat("_CloudDensity",cloudDensity);
+
 
         smokePainter.SetTexture(0, "_DepthTextureRT", depthTexture);
         smokePainter.SetTexture(0,"_CloudColRT",cloudCol);
