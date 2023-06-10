@@ -39,7 +39,7 @@ public class Voxelizer : MonoBehaviour
 
     private void OnEnable()
     {
-        voxelize = (ComputeShader)Resources.Load("Voxelize");
+        voxelize = (ComputeShader)Resources.Load("CS_Voxel");
         voxelDebugger = Shader.Find("Hidden/S_VoxelVisualizer");
         CombineBound(sceneToFill);
         totalVoxel = GetTotalVoxel(sceneBound.size, voxelSize,out voxelResolution);

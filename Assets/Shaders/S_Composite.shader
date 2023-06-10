@@ -1,4 +1,4 @@
-Shader "Hidden/S_Composit"
+Shader "Hidden/S_Composite"
 {
     
     SubShader

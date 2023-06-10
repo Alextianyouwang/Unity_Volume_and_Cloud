@@ -1,4 +1,4 @@
-Shader "Custom/Dummy" {
+Shader "Custom/S_Dummy" {
 
 	Properties {
 		_Albedo1 ("Albedo 1", Color) = (1, 1, 1, 1)
