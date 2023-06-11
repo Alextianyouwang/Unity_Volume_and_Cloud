@@ -27,7 +27,7 @@ struct Sphere
 StructuredBuffer<Sphere> _SphereBuffer;
 int _SphereCount;
 
-static const float maxDist = 30;
+static const float maxDist = 20;
 static const float epsilon = 0.001;
 
 struct Ray
@@ -113,7 +113,7 @@ float RemapDensity( float3 position)
     {
         distToCent = min(distToCent, distance(position, _SphereBuffer[j].center));
     }
-    return   1-smoothstep(-3, 1.5,  distToCent);
+    return  smoothstep(1.5, 0,  distToCent);
 }
 
 float SampleDensity(float3 position) 
@@ -126,9 +126,9 @@ float SampleDensity(float3 position)
 float LightMarch(float3 position) 
 {
     float totalDensity = 0;
-    for (int i = 0; i < 6; i++) 
+    for (int i = 0; i < 5; i++) 
     {
-        const float stepSize = 0.2;
+        const float stepSize = 0.3;
         
         position += -_LightDirection * stepSize;
         
@@ -158,7 +158,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
     int marchStep = 0;
     int insideObject = -1, initialState = 0;
 
-    const float stepSize = 0.1;
+    const float stepSize = 0.15;
     const float3 lightCol = float3 (1, 1, 0.8);
     const float3 extCol = float3 (0.2, 0.2, 0.3);
     const float pf = dot(d, -_Unity_V[2].xyz);
@@ -168,7 +168,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         marchStep ++;
         throughPos = o + d * hitDist;
         const float distToObject =SDF(throughPos);
-        const float marchDist = distToObject <= epsilon ? stepSize : max(distToObject,stepSize) ;
+        const float marchDist = distToObject <= epsilon ? stepSize : distToObject ;
 
         if (distToObject <= epsilon)
         {
@@ -188,17 +188,17 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
             if (insideObject > 0)
                 insideObject *= -1;
 
-        if (initialState != insideObject && distToObject > epsilon)
+        if (initialState != insideObject && distToObject >epsilon)
         {
             float3 posBeforeExit = throughPos - d * stepSize;
             float exitLength = -SDF(posBeforeExit);
             float3 boundaryPos = posBeforeExit + d * exitLength;
-            float bias = dot(d, GetNormal(posBeforeExit));
-            exitLength /= bias;
+            float bias = saturate(dot(d, GetNormal(boundaryPos)));
+            exitLength /= bias+0.01;
             CalculateLighting(exitLength, boundaryPos, density, transmittance, lightEnergy);
         }
 
-        if (transmittance <= 0.001)
+        if (transmittance <= 0.01)
             break;
         if (hitDist * pf + stepSize > geoDepth)
             break;
