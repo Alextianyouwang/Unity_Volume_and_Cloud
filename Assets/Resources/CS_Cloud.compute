@@ -155,49 +155,28 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
     float density = 0;
     float transmittance = 1;
     float lightEnergy = 0;
-    const float stepSize = 0.2;
-
     int marchStep = 0;
+    int insideObject = -1, initialState = 0;
+
+    const float stepSize = 0.1;
     const float3 lightCol = float3 (1, 1, 0.8);
     const float3 extCol = float3 (0.2, 0.2, 0.3);
-    int insideObject = -1,initialState = 0;
- 
     const float pf = dot(d, -_Unity_V[2].xyz);
+
     while ( hitDist < maxDist)
     {
         marchStep ++;
         throughPos = o + d * hitDist;
         const float distToObject =SDF(throughPos);
-        const float marchDist = distToObject <= epsilon ? stepSize : distToObject;
+        const float marchDist = distToObject <= epsilon ? stepSize : max(distToObject,stepSize) ;
 
-        if (distToObject <= epsilon)
-        {
-            if (insideObject < 0)
-                insideObject *= -1;
-        }
-        else
-        {
-            if (insideObject > 0)
-                insideObject *= -1;
-        }
-
-        if (initialState != insideObject && distToObject > epsilon)
-        {
-            float3 posBeforeExit = throughPos - d * stepSize;
-            float exitLength = SDF(posBeforeExit);
-            float3 directionToCenter = GetNormal(posBeforeExit);
-            float bias = dot(directionToCenter, d);
-            float3 correctPos = posBeforeExit - d * exitLength * bias;
-            CalculateLighting(-exitLength, correctPos, density, transmittance, lightEnergy);
-        }
-        
-        if (transmittance <= 0.001)
-            break;
         if (distToObject <= epsilon)
         {
             hitPos = throughPos;
-            if (initialState == insideObject)
-                CalculateLighting(stepSize, throughPos, density, transmittance, lightEnergy);
+            if (insideObject < 0)
+                insideObject *= -1;
+
+            CalculateLighting(stepSize, throughPos, density, transmittance, lightEnergy);
 
             if (hitDist * pf + stepSize > geoDepth)
             {
@@ -205,10 +184,23 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
                 break;
             }
         }
- 
+        else
+            if (insideObject > 0)
+                insideObject *= -1;
 
+        if (initialState != insideObject && distToObject > epsilon)
+        {
+            float3 posBeforeExit = throughPos - d * stepSize;
+            float exitLength = -SDF(posBeforeExit);
+            float3 boundaryPos = posBeforeExit + d * exitLength;
+            float bias = dot(d, GetNormal(posBeforeExit));
+            exitLength /= bias;
+            CalculateLighting(exitLength, boundaryPos, density, transmittance, lightEnergy);
+        }
+
+        if (transmittance <= 0.001)
+            break;
         if (hitDist * pf + stepSize > geoDepth)
-
             break;
        
         hitDist +=  marchDist;
@@ -218,9 +210,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
     throughPos += snappingOffset * d;
     CalculateLighting(snappingOffset, throughPos, density, transmittance, lightEnergy);
     const float3 col = lerp(extCol, lightCol, lightEnergy);
-    return CreateSceneInfo(hitPos, -GetNormal(hitPos), SDF(_CamPosWS) > 0 ? hitDist : -hitDist + 0.001, marchStep, 1 - transmittance, col);
-
-    return CreateSceneInfo(0,0,0,marchStep,0,extCol);
+    return CreateSceneInfo(hitPos, -GetNormal(hitPos), SDF(_CamPosWS) > 0 ? hitDist : -hitDist + 0.001, marchStep, 1 - transmittance, col);s
 }
 
 
