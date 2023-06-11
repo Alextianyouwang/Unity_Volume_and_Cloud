@@ -210,14 +210,16 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
     throughPos += snappingOffset * d;
     CalculateLighting(snappingOffset, throughPos, density, transmittance, lightEnergy);
     const float3 col = lerp(extCol, lightCol, lightEnergy);
-    return CreateSceneInfo(hitPos, -GetNormal(hitPos), SDF(_CamPosWS) > 0 ? hitDist : -hitDist + 0.001, marchStep, 1 - transmittance, col);s
+    return CreateSceneInfo(hitPos, -GetNormal(hitPos), SDF(_CamPosWS) > 0 ? hitDist : -hitDist + 0.001, marchStep, 1 - transmittance, col);
 }
 
 
 [numthreads(8,8,1)]
 void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
 {
-    const float2 uv = float2 (id.x / _ScreenWidth, id.y / _ScreenHeight);
+    float2 uv = float2 (id.x / (_ScreenWidth), id.y /(_ScreenHeight));
+    //uv += float2 (1 / (float)(_ScreenWidth), 1 / (float)(_ScreenHeight));
+
     const float geometryDepthNDC = _DepthTextureRT.SampleLevel(sampler_DepthTextureRT, uv, 0);
     const float geometryDepthVS = LinearEyeDepth(geometryDepthNDC);
     const Ray camRay = ComputeCameraRay(uv * 2 -1);

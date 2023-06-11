@@ -49,8 +49,8 @@ public class RayMarchSmoke : MonoBehaviour
         smokePainter = (ComputeShader)Resources.Load("CS_Cloud");
         mainLight = GameObject.Find("Directional Light").GetComponent<Light>();
         downScaleFactorLocal = downScaleFactor;
-        screenW = Screen.width/ downScaleFactorLocal;
-        screenH = Screen.height/ downScaleFactorLocal;
+        screenW = cam.pixelWidth/ downScaleFactorLocal;
+        screenH = cam.pixelHeight/ downScaleFactorLocal;
         
     }
 
@@ -79,14 +79,14 @@ public class RayMarchSmoke : MonoBehaviour
 
     private void CheckResolution()
     {
-        if (screenH != Screen.height / downScaleFactorLocal
-            || screenW != Screen.width / downScaleFactorLocal
+        if (screenH != cam.pixelHeight / downScaleFactorLocal
+            || screenW != cam.pixelWidth / downScaleFactorLocal
             || downScaleFactorLocal != downScaleFactor
            )
         {
             downScaleFactorLocal = downScaleFactor;
-            screenW = Screen.width/downScaleFactorLocal;
-            screenH = Screen.height/downScaleFactorLocal;
+            screenW = cam.pixelWidth/downScaleFactorLocal;
+            screenH = cam.pixelHeight/downScaleFactorLocal;
             CreateTexture(screenW,screenH);
         }
     }
@@ -128,7 +128,6 @@ public class RayMarchSmoke : MonoBehaviour
             smokePainter.SetInt("_SphereCount",drawer.GetMaxSphereNumber());
             smokePainter.SetBuffer(0,"_SphereBuffer",drawer.GetSphereBuffer());
             smokePainter.Dispatch(0,Mathf.CeilToInt(screenW/8f), Mathf.CeilToInt(screenH/8f),1);
-
         }
         
         composite.SetTexture("_MainTex",src);
