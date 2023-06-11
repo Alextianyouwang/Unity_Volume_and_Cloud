@@ -14,8 +14,12 @@ float3 _CamPosWS;
 float3 _LightDirection;
 
 float _BlendFactor;
+float3 _CloudColor,_LightColor;
 
 float _CloudAbsorbance, _LightIntensity, _CloudDensity;
+float _EyeSampleStepSize = 0.2;
+float _LightStepSize = 0.2;
+int _LightSampleCount = 5;
 
 
 struct Sphere
@@ -97,15 +101,6 @@ float3 GetNormal(float3 pos)
     float z = SDF(pos + e.xxy);
     return normalize( float3 (x,y,z) - SDF(pos));
 }
-float GetAnimatedSphereR()
-{
-    float radius = 10;
-    for (int i = 0; i<_SphereCount; i ++)
-    {
-        radius = min(radius,-SDF(_SphereBuffer[i].center)); 
-    }
-    return  radius;
-}
 float RemapDensity( float3 position) 
 {
     float distToCent = 100;
@@ -126,9 +121,9 @@ float SampleDensity(float3 position)
 float LightMarch(float3 position) 
 {
     float totalDensity = 0;
-    for (int i = 0; i < 5; i++) 
+    for (int i = 0; i < _LightSampleCount; i++) 
     {
-        const float stepSize = 0.3;
+        const float stepSize = _LightStepSize;
         
         position += -_LightDirection * stepSize;
         
@@ -158,9 +153,9 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
     int marchStep = 0;
     int insideObject = -1, initialState = 0;
 
-    const float stepSize = 0.15;
-    const float3 lightCol = float3 (1, 1, 0.8);
-    const float3 extCol = float3 (0.2, 0.2, 0.3);
+    const float stepSize = _EyeSampleStepSize;
+    //const float3 lightCol = float3 (1, 1, 0.8);
+    //const float3 extCol = float3 (0.2, 0.2, 0.3);
     const float pf = dot(d, -_Unity_V[2].xyz);
 
     while ( hitDist < maxDist)
@@ -190,14 +185,14 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
 
         if (initialState != insideObject && distToObject >epsilon)
         {
-            float3 posBeforeExit = throughPos - d * stepSize;
+            const float3 posBeforeExit = throughPos - d * stepSize;
             float exitLength = -SDF(posBeforeExit);
-            float3 boundaryPos = posBeforeExit + d * exitLength;
-            float bias = saturate(dot(d, GetNormal(boundaryPos)));
-            exitLength /= bias+0.01;
+            const float bias = saturate(dot(d, GetNormal(hitPos)));
+            exitLength /= bias+0.02;
+            const float3 boundaryPos = posBeforeExit + d * exitLength;
+
             CalculateLighting(exitLength, boundaryPos, density, transmittance, lightEnergy);
         }
-
         if (transmittance <= 0.01)
             break;
         if (hitDist * pf + stepSize > geoDepth)
@@ -209,7 +204,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
 
     throughPos += snappingOffset * d;
     CalculateLighting(snappingOffset, throughPos, density, transmittance, lightEnergy);
-    const float3 col = lerp(extCol, lightCol, lightEnergy);
+    const float3 col = lerp(_CloudColor, _LightColor, lightEnergy);
     return CreateSceneInfo(hitPos, -GetNormal(hitPos), SDF(_CamPosWS) > 0 ? hitDist : -hitDist + 0.001, marchStep, 1 - transmittance, col);
 }
 
@@ -217,9 +212,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
 [numthreads(8,8,1)]
 void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
 {
-    float2 uv = float2 (id.x / (_ScreenWidth), id.y /(_ScreenHeight));
-    //uv += float2 (1 / (float)(_ScreenWidth), 1 / (float)(_ScreenHeight));
-
+    float2 uv = float2 (id.x / (_ScreenWidth - 1), id.y /(_ScreenHeight - 1));
     const float geometryDepthNDC = _DepthTextureRT.SampleLevel(sampler_DepthTextureRT, uv, 0);
     const float geometryDepthVS = LinearEyeDepth(geometryDepthNDC);
     const Ray camRay = ComputeCameraRay(uv * 2 -1);

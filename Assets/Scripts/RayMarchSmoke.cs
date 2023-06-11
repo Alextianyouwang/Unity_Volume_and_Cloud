@@ -23,16 +23,27 @@ public class RayMarchSmoke : MonoBehaviour
     public int downScaleFactor = 2;
     private int downScaleFactorLocal;
 
+    [Header("Cloud Color")]
+    [ColorUsage(true,true)] 
+    public Color cloudColor;
+
+    [Header("Ray Marching Setting")] 
+    [Range(0.05f,0.5f)]
+    public float eyeSampleStepSize = 0.15f;
+    [Range(0,8)]
+    public int lightSampleCount = 5;
+    [Range(0.05f,0.5f)]
+    public float lightStepSize = 0.15f;
+
+    [Header("Lighting Setting" )]
     [Range(0,300)]
     public float cloudDensity= 200;
     [Range(0,300)]
     public float cloudAbsorbance = 200;
     [Range(0,300)]
     public float lightIntensity = 200;
-   
 
-
-
+    [Header("Shape Blend Setting" )]
     [Range(0, 1)] public float blendFactor = 0.5f;
     
     private void OnEnable()
@@ -56,14 +67,15 @@ public class RayMarchSmoke : MonoBehaviour
 
     private void CreateTexture(int width, int height)
     {
-        depthTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
-        
+        depthTexture = RenderTexture.GetTemporary(cam.pixelWidth, cam.pixelHeight, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        depthTexture.filterMode = FilterMode.Point;
 
-        cloudCol = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.sRGB);
+        cloudCol = RenderTexture.GetTemporary(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.sRGB);
         cloudCol.enableRandomWrite = true;
+        depthTexture.filterMode = FilterMode.Point;
         cloudCol.Create();
         
-        cloudMask = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.Linear);
+        /*cloudMask = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.Linear);
         cloudMask.enableRandomWrite = true;
         cloudMask.Create();
         
@@ -73,7 +85,7 @@ public class RayMarchSmoke : MonoBehaviour
         
         cloudAlpha = new RenderTexture(width, height, 0,RenderTextureFormat.ARGB64,RenderTextureReadWrite.Linear);
         cloudAlpha.enableRandomWrite = true;
-        cloudAlpha.Create();
+        cloudAlpha.Create();*/
         
     }
 
@@ -116,13 +128,19 @@ public class RayMarchSmoke : MonoBehaviour
         smokePainter.SetFloat("_CloudAbsorbance",cloudAbsorbance);
         smokePainter.SetFloat("_LightIntensity",lightIntensity);
         smokePainter.SetFloat("_CloudDensity",cloudDensity);
+        smokePainter.SetFloat("_LightStepSize",lightStepSize);
+        smokePainter.SetFloat("_EyeSampleStepSize",eyeSampleStepSize);
+        smokePainter.SetInt("_LightSampleCount",lightSampleCount);
+        smokePainter.SetVector("_CloudColor", new Vector3(cloudColor.r,cloudColor.g,cloudColor.b));
+        Color lightColor = mainLight.color;
+        smokePainter.SetVector("_LightColor",new Vector3(lightColor.r,lightColor.g,lightColor.b));
 
 
         smokePainter.SetTexture(0, "_DepthTextureRT", depthTexture);
         smokePainter.SetTexture(0,"_CloudColRT",cloudCol);
-        smokePainter.SetTexture(0,"_CloudMaskRT",cloudMask);
-        smokePainter.SetTexture(0,"_CloudDepthRT",cloudDepth);
-        smokePainter.SetTexture(0,"_CloudAlphaRT",cloudAlpha);
+        //smokePainter.SetTexture(0,"_CloudMaskRT",cloudMask);
+        //smokePainter.SetTexture(0,"_CloudDepthRT",cloudDepth);
+        //smokePainter.SetTexture(0,"_CloudAlphaRT",cloudAlpha);
         if (drawer!= null && drawer.GetSphereBuffer()!= null)
         {
             smokePainter.SetInt("_SphereCount",drawer.GetMaxSphereNumber());
@@ -132,9 +150,9 @@ public class RayMarchSmoke : MonoBehaviour
         
         composite.SetTexture("_MainTex",src);
         composite.SetTexture("_CloudCol",cloudCol);
-        composite.SetTexture("_CloudMask",cloudMask);
-        composite.SetTexture("_CloudDepth",cloudDepth);
-        composite.SetTexture("_CloudAlpha",cloudAlpha);
+        //composite.SetTexture("_CloudMask",cloudMask);
+        //composite.SetTexture("_CloudDepth",cloudDepth);
+        //composite.SetTexture("_CloudAlpha",cloudAlpha);
         Graphics.Blit(src,dest,composite);
         
     }
@@ -145,8 +163,8 @@ public class RayMarchSmoke : MonoBehaviour
         depthTexture.Release();
         
         cloudCol.Release();
-        cloudMask.Release();
-        cloudDepth.Release();
-        cloudAlpha.Release();
+        //cloudMask.Release();
+        //cloudDepth.Release();
+        //cloudAlpha.Release();
     }
 }
