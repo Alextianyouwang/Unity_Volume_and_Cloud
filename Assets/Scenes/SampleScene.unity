@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.4513229, g: 0.5009528, b: 0.5730464, a: 1}
+  m_IndirectSpecularColor: {r: 0.45132357, g: 0.500954, b: 0.57304776, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -609,7 +609,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   downScaleFactor: 2
-  cloudColor: {r: 0.100302614, g: 0.11521195, b: 0.13207549, a: 0}
+  cloudColor: {r: 0.20024918, g: 0.2525142, b: 0.33962262, a: 0}
   eyeSampleStepSize: 0.15
   lightSampleCount: 5
   lightStepSize: 0.3

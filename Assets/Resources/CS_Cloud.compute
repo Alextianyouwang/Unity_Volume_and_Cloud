@@ -187,10 +187,9 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         {
             const float3 posBeforeExit = throughPos - d * stepSize;
             float exitLength = -SDF(posBeforeExit);
-            const float bias = saturate(dot(d, GetNormal(hitPos)));
+            const float bias = saturate(dot(d, GetNormal(posBeforeExit)));
             exitLength /= bias+0.02;
             const float3 boundaryPos = posBeforeExit + d * exitLength;
-
             CalculateLighting(exitLength, boundaryPos, density, transmittance, lightEnergy);
         }
         if (transmittance <= 0.01)
@@ -201,7 +200,7 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
         hitDist +=  marchDist;
         initialState = insideObject;
     }
-
+    
     throughPos += snappingOffset * d;
     CalculateLighting(snappingOffset, throughPos, density, transmittance, lightEnergy);
     const float3 col = lerp(_CloudColor, _LightColor, lightEnergy);

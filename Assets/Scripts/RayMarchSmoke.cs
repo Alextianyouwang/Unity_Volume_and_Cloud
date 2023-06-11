@@ -28,7 +28,7 @@ public class RayMarchSmoke : MonoBehaviour
     public Color cloudColor;
 
     [Header("Ray Marching Setting")] 
-    [Range(0.05f,0.5f)]
+    [Range(0.05f,0.4f)]
     public float eyeSampleStepSize = 0.15f;
     [Range(0,8)]
     public int lightSampleCount = 5;
