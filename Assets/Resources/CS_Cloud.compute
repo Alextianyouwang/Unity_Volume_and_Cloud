@@ -26,7 +26,6 @@ struct Sphere
 {
     float3 center;
     float radius;
-    float smooth;
 };
 StructuredBuffer<Sphere> _SphereBuffer;
 int _SphereCount;
@@ -78,6 +77,39 @@ SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int ma
     return sceneInfo;
 }
 
+void SphereTrace(float3 ro, float3 so, float3 d,float r, out float3 hit0, out float3 hit1) 
+{
+    hit0 = 0;
+    hit1 = 0;
+    float3 rs = normalize(so - ro);
+    float rToS = length(so - ro);
+    float rToC = max(0,  dot(rs, d)) * rToS;
+    
+       
+    float3 c = ro + d * rToC;
+    float sToC =  dot(-rs, so - c ) * rToS;
+    if (sToC > r )
+        return;
+    
+    float hit0ToC = sqrt(pow(r, 2)- pow(sToC, 2));
+
+    
+    hit0 = c - d * hit0ToC;
+    hit1 = c + d * hit0ToC;
+
+    /*float3 offsetRayO = ro - so;
+    float a = dot(d, d);
+    float b = 2 * dot(offsetRayO, d);
+    float c = dot(offsetRayO, offsetRayO) - r * r;
+    float discriminant = b * b - 4 * a * c;
+    if (discriminant >= 0) {
+
+        float q = (-b - sqrt(discriminant)) / (2 * a);
+        hit0 = ro + d * q;
+        hit1 = 0;
+    }*/
+}
+
 float Spheres (float3 pos)
 {
     float globalDist = maxDist;
@@ -113,8 +145,10 @@ float RemapDensity( float3 position)
 
 float SampleDensity(float3 position) 
 {
-    float density = fbm(position ) * 0.5;
-    density += fbm(position * 3)*0.5;
+    float density = fbm(position *2 ) * 0.3;
+    density += (fbm(position * 5)-0.2)*0.05;
+
+    //density = ace_worley(position,10);
     return density ;
 }
 
@@ -219,5 +253,10 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
 
     const float sceneAlpha = sceneInfo.alpha;
     float3 col = sceneInfo.lightCol;
-    _CloudColRT[id.xy] =  float4 (col,sceneAlpha);
+
+    float3 hit0;
+    float3 hit1;
+    SphereTrace(camRay.origin, _SphereBuffer[0].center, camRay.direction, _SphereBuffer[0].radius,  hit0, hit1);
+
+    _CloudColRT[id.xy] =  float4 (hit0,0.5);
 }

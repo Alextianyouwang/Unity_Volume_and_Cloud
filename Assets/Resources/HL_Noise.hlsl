@@ -1,5 +1,6 @@
 #ifndef NOISE
 #define NOISE
+
 float3x3 m =float3x3(0.00, 0.80, 0.60,
     -0.80, 0.36, -0.48,
     -0.60, -0.48, 0.64);
@@ -28,6 +29,48 @@ float fbm(float3 p)
     f += 0.2500 * noise(p); p = mul(m , p) * 2.03;
     f += 0.1250 * noise(p);
     return f;
+}
+
+int _CellSize = 1, _AxisCellCount= 20, _InvertNoise = 1, _Seed = 3286365;
+float ace_hash(uint n) {
+    // integer hash copied from Hugo Elias
+    n = (n << 13U) ^ n;
+    n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
+    return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
+}
+float  ace_worley(float3 coord, int axisCellCount) {
+    int3 cell = floor(coord / _CellSize);
+
+    float3 localSamplePos = float3(coord / _CellSize - cell);
+
+    float dist = 1.0f;
+
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
+            for (int z = -1; z <= 1; ++z) {
+                int3 cellCoordinate = cell + int3(x, y, z);
+                int x = cellCoordinate.x;
+                int y = cellCoordinate.y;
+                int z = cellCoordinate.z;
+
+                if (x == -1 || x == axisCellCount || y == -1 || y == axisCellCount || z == -1 || z == axisCellCount) {
+                    int3 wrappedCellCoordinate = fmod(cellCoordinate + axisCellCount, (int3)axisCellCount);
+                    int wrappedCellIndex = wrappedCellCoordinate.x + axisCellCount * (wrappedCellCoordinate.y + wrappedCellCoordinate.z * axisCellCount);
+                    float3 featurePointOffset = cellCoordinate + float3(hash(_Seed + wrappedCellIndex), hash(_Seed + wrappedCellIndex * 2), hash(_Seed + wrappedCellIndex * 3));
+                    dist = min(dist, distance(cell + localSamplePos, featurePointOffset));
+                }
+                else {
+                    int cellIndex = cellCoordinate.x + axisCellCount * (cellCoordinate.y + cellCoordinate.z * axisCellCount);
+                    float3 featurePointOffset = cellCoordinate + float3(hash(_Seed + cellIndex), hash(_Seed + cellIndex * 2), hash(_Seed + cellIndex * 3));
+                    dist = min(dist, distance(cell + localSamplePos, featurePointOffset));
+                }
+            }
+        }
+    }
+
+    dist = sqrt(1.0f - dist * dist);
+    dist *= dist * dist * dist * dist * dist;
+    return dist;
 }
 
 #endif

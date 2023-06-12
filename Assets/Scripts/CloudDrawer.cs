@@ -15,7 +15,7 @@ public class CloudDrawer : MonoBehaviour
     {
         public Vector3 center;
         public float radius;
-        public float smooth;
+
     }
 
     public class SphereAnim
@@ -27,7 +27,7 @@ public class CloudDrawer : MonoBehaviour
         public float targetSmooth;
         public AnimationCurve animationCurve;
 
-        public SphereAnim(float _endtime, float _targetRadius, float _targetSmooth, AnimationCurve _animationCurve, Sphere _sphere)
+        public SphereAnim(float _endtime, float _targetRadius, AnimationCurve _animationCurve, Sphere _sphere)
         {
             endTime = _endtime;
             targetRadius = _targetRadius;
@@ -35,14 +35,14 @@ public class CloudDrawer : MonoBehaviour
             sphere = _sphere;
             sphere.center = Vector3.one * 10000f;
             sphere.radius = 0;
-            sphere.smooth = targetSmooth;
+
         }
 
         public void Spawn(Vector3 pos)
         {
             sphere.center = pos;
             sphere.radius = 0f;
-            sphere.smooth = targetSmooth;
+
             time = 0;
         }
 
@@ -87,10 +87,10 @@ public class CloudDrawer : MonoBehaviour
         cam = GetComponent<Camera>();
         for(int i = 0; i < maxSphereCount; i ++)
         {
-            activeSphereAnims[i] = new SphereAnim(2f,1.5f, 0.5f,sphereRadiusCurve, new Sphere());
+            activeSphereAnims[i] = new SphereAnim(2f,1.5f,sphereRadiusCurve, new Sphere());
         }
         smokePainter = (ComputeShader)Resources.Load("SmokePainter");
-        sphereBuffer = new ComputeBuffer(maxSphereCount, sizeof(float) * 5);
+        sphereBuffer = new ComputeBuffer(maxSphereCount, sizeof(float) * 4);
     }
 
     private void OnDisable()
