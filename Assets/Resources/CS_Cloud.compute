@@ -77,19 +77,37 @@ SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int ma
     return sceneInfo;
 }
 
-void SphereTrace(float3 ro, float3 so, float3 d,float r, out float3 hit0, out float3 hit1) 
+struct HitInfo 
 {
-    hit0 = 0;
-    hit1 = 0;
+    float3 hit0;
+    float3 hit1;
+    float3 hit;
+    float hit0dist;
+    float hit1dist;
+    float3 hit0normal,hit1normal,normal;
+};
+
+
+HitInfo SphereTrace( Ray ray, float3 so,float r) 
+{
+    HitInfo hit = (HitInfo)0;
+    float3 hit0 = 0;
+    float3 hit1 = 0;
+    float hit0dist = 0;
+    float hit1dist = 0;
+
+    float3 ro = ray.origin;
+    float3 d = ray.direction;
+    
     float3 rs = normalize(so - ro);
     float rToS = length(so - ro);
-    float rToC = max(0,  dot(rs, d)) * rToS;
+    float rToC = max(0,dot(rs, d)) * rToS;
     
        
     float3 c = ro + d * rToC;
     float sToC =  dot(-rs, so - c ) * rToS;
     if (sToC > r )
-        return;
+        return hit;
     
     float hit0ToC = sqrt(pow(r, 2)- pow(sToC, 2));
 
@@ -97,18 +115,40 @@ void SphereTrace(float3 ro, float3 so, float3 d,float r, out float3 hit0, out fl
     hit0 = c - d * hit0ToC;
     hit1 = c + d * hit0ToC;
 
-    /*float3 offsetRayO = ro - so;
-    float a = dot(d, d);
-    float b = 2 * dot(offsetRayO, d);
-    float c = dot(offsetRayO, offsetRayO) - r * r;
-    float discriminant = b * b - 4 * a * c;
-    if (discriminant >= 0) {
+    hit0dist = length(hit0 - ro);
+    hit1dist = length(hit1 - ro);
 
-        float q = (-b - sqrt(discriminant)) / (2 * a);
-        hit0 = ro + d * q;
-        hit1 = 0;
-    }*/
+    hit.hit0 = hit0;
+    hit.hit1 = hit1;
+    hit.hit0dist = hit0dist;
+    hit.hit1dist = hit1dist;
+    hit.hit0normal= normalize(hit0 - so);
+    hit.hit1normal = normalize(hit1 - so);
+
+    hit.normal = rToS < r ? hit. hit1normal : hit. hit0normal;
+
+    hit.hit = rToS < r ? hit1 : hit0;
+
+    return hit;
 }
+
+HitInfo SpheresTrace(Ray ray)
+{
+    HitInfo bestHit = (HitInfo)0;
+    bestHit.hit0dist = 1.#INF;
+
+    for (int i = 0; i < _SphereCount; i++)
+    {
+        Sphere sphere = _SphereBuffer[i];
+        HitInfo hitInfo = SphereTrace(ray, sphere.center, sphere.radius);
+        if (hitInfo.hit0dist < bestHit.hit0dist) 
+        {
+            bestHit = hitInfo;
+        }
+    }
+    return bestHit;
+}
+
 
 float Spheres (float3 pos)
 {
@@ -254,9 +294,10 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
     const float sceneAlpha = sceneInfo.alpha;
     float3 col = sceneInfo.lightCol;
 
-    float3 hit0;
-    float3 hit1;
-    SphereTrace(camRay.origin, _SphereBuffer[0].center, camRay.direction, _SphereBuffer[0].radius,  hit0, hit1);
+    
+    
+    HitInfo hit = SpheresTrace(camRay);
 
-    _CloudColRT[id.xy] =  float4 (hit0,0.5);
+    _CloudColRT[id.xy] =  float4 (hit.normal,0.8);
+    //_CloudColRT[id.xy] =  float4 (col,sceneAlpha);
 }
