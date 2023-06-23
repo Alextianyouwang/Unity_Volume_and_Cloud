@@ -77,77 +77,77 @@ SceneInfo CreateSceneInfo(float3 position, float3 normal, float rayDepth, int ma
     return sceneInfo;
 }
 
-struct HitInfo 
-{
-    float3 hit0;
-    float3 hit1;
-    float3 hit;
-    float hit0dist;
-    float hit1dist;
-    float3 hit0normal,hit1normal,normal;
-};
-
-
-HitInfo SphereTrace( Ray ray, float3 so,float r) 
-{
-    HitInfo hit = (HitInfo)0;
-    float3 hit0 = 0;
-    float3 hit1 = 0;
-    float hit0dist = 0;
-    float hit1dist = 0;
-
-    float3 ro = ray.origin;
-    float3 d = ray.direction;
-    
-    float3 rs = normalize(so - ro);
-    float rToS = length(so - ro);
-    float rToC = max(0,dot(rs, d)) * rToS;
-    
-       
-    float3 c = ro + d * rToC;
-    float sToC =  dot(-rs, so - c ) * rToS;
-    if (sToC > r )
-        return hit;
-    
-    float hit0ToC = sqrt(pow(r, 2)- pow(sToC, 2));
-
-    
-    hit0 = c - d * hit0ToC;
-    hit1 = c + d * hit0ToC;
-
-    hit0dist = length(hit0 - ro);
-    hit1dist = length(hit1 - ro);
-
-    hit.hit0 = hit0;
-    hit.hit1 = hit1;
-    hit.hit0dist = hit0dist;
-    hit.hit1dist = hit1dist;
-    hit.hit0normal= normalize(hit0 - so);
-    hit.hit1normal = normalize(hit1 - so);
-
-    hit.normal = rToS < r ? hit. hit1normal : hit. hit0normal;
-
-    hit.hit = rToS < r ? hit1 : hit0;
-
-    return hit;
-}
-
-HitInfo SpheresTrace(Ray ray)
-{
-    HitInfo bestHit = (HitInfo)0;
-    bestHit.hit0dist = 1.#INF;
-
-    for (int i = 0; i < _SphereCount; i++)
-    {
-        Sphere sphere = _SphereBuffer[i];
-        HitInfo hitInfo = SphereTrace(ray, sphere.center, sphere.radius);
-        if (hitInfo.hit0dist < bestHit.hit0dist) 
-        {
-            bestHit = hitInfo;
-        }
-    }
-    return bestHit;
-}
+//struct HitInfo 
+//{
+//    float3 hit0;
+//    float3 hit1;
+//    float3 hit;
+//    float hit0dist;
+//    float hit1dist;
+//    float3 hit0normal,hit1normal,normal;
+//};
+//
+//
+//HitInfo SphereTrace( Ray ray, float3 so,float r) 
+//{
+//    HitInfo hit = (HitInfo)0;
+//    float3 hit0 = 0;
+//    float3 hit1 = 0;
+//    float hit0dist = 0;
+//    float hit1dist = 0;
+//
+//    float3 ro = ray.origin;
+//    float3 d = ray.direction;
+//    
+//    float3 rs = normalize(so - ro);
+//    float rToS = length(so - ro);
+//    float rToC = max(0,dot(rs, d)) * rToS;
+//    
+//       
+//    float3 c = ro + d * rToC;
+//    float sToC =  dot(-rs, so - c ) * rToS;
+//    if (sToC > r )
+//        return hit;
+//    
+//    float hit0ToC = sqrt(pow(r, 2)- pow(sToC, 2));
+//
+//    
+//    hit0 = c - d * hit0ToC;
+//    hit1 = c + d * hit0ToC;
+//
+//    hit0dist = length(hit0 - ro);
+//    hit1dist = length(hit1 - ro);
+//
+//    hit.hit0 = hit0;
+//    hit.hit1 = hit1;
+//    hit.hit0dist = hit0dist;
+//    hit.hit1dist = hit1dist;
+//    hit.hit0normal= normalize(hit0 - so);
+//    hit.hit1normal = normalize(hit1 - so);
+//
+//    hit.normal = rToS < r ? hit. hit1normal : hit. hit0normal;
+//
+//    hit.hit = rToS < r ? hit1 : hit0;
+//
+//    return hit;
+//}
+//
+//HitInfo SpheresTrace(Ray ray)
+//{
+//    HitInfo bestHit = (HitInfo)0;
+//    bestHit.hit0dist = 1.#INF;
+//
+//    for (int i = 0; i < _SphereCount; i++)
+//    {
+//        Sphere sphere = _SphereBuffer[i];
+//        HitInfo hitInfo = SphereTrace(ray, sphere.center, sphere.radius);
+//        if (hitInfo.hit0dist < bestHit.hit0dist) 
+//        {
+//            bestHit = hitInfo;
+//        }
+//    }
+//    return bestHit;
+//}
 
 
 float Spheres (float3 pos)
@@ -228,8 +228,6 @@ SceneInfo RenderSceneInfo(float3 o, float3 d, float geoDepth)
     int insideObject = -1, initialState = 0;
 
     const float stepSize = _EyeSampleStepSize;
-    //const float3 lightCol = float3 (1, 1, 0.8);
-    //const float3 extCol = float3 (0.2, 0.2, 0.3);
     const float pf = dot(d, -_Unity_V[2].xyz);
 
     while ( hitDist < maxDist)
@@ -296,8 +294,7 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
 
     
     
-    HitInfo hit = SpheresTrace(camRay);
-
-    _CloudColRT[id.xy] =  float4 (hit.normal,0.8);
-    //_CloudColRT[id.xy] =  float4 (col,sceneAlpha);
+    //HitInfo hit = SpheresTrace(camRay);
+    //_CloudColRT[id.xy] =  float4 (hit.normal,0.8);
+    _CloudColRT[id.xy] =  float4 (col,sceneAlpha);
 }
