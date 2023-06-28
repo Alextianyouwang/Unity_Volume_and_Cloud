@@ -1,0 +1,17 @@
+
+#pragma kernel CS_GenerateWNoise;
+#include "HL_Noise.hlsl"
+
+RWTexture2D<float4> _NoiseRT;
+//RWStructuredBuffer<float3> _SeedBuffer;
+int _Resolution;
+
+[numthreads(8,8,1)]
+void CS_GenerateWNoise(uint3 id : SV_DispatchThreadID)
+{
+    float2 uv =id.xy / float(_Resolution);
+    float2 scaledUV = uv * 8;
+    float2 tiledUV = frac(scaledUV);
+    float2 chunkUV = (scaledUV - tiledUV)/8;
+    _NoiseRT[id.xy] = float4 (chunkUV, 0, 1);
+}
