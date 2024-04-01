@@ -292,9 +292,8 @@ void CS_DrawSmoke(uint3 id : SV_DispatchThreadID)
     const float sceneAlpha = sceneInfo.alpha;
     float3 col = sceneInfo.lightCol;
 
-    
-    
     //HitInfo hit = SpheresTrace(camRay);
     //_CloudColRT[id.xy] =  float4 (hit.normal,0.8);
     _CloudColRT[id.xy] =  float4 (col,sceneAlpha);
+   // _CloudColRT[id.xy] = float4 (sceneInfo.marchStep * 0.01.xxx,1);
 }
