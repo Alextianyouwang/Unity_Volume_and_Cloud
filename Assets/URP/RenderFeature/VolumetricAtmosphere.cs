@@ -13,7 +13,7 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
         private FilteringSettings filteringSettings;
         private ProfilingSampler _profilingSampler;
         private List<ShaderTagId> shaderTagsList = new List<ShaderTagId>();
-        private RTHandle rtCustomColor, rtTempColor;
+        private RTHandle rtCustomColor, rtTempColor, rtDepth;
 
         public CustomRenderPass(Settings settings, string name)
         {
@@ -48,24 +48,20 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
             }
 
             // Using camera's depth target (that way we can ZTest with scene objects still)
-            RTHandle rtCameraDepth = renderingData.cameraData.renderer.cameraDepthTargetHandle;
+            rtDepth = renderingData.cameraData.renderer.cameraDepthTargetHandle;
 
-            ConfigureTarget(rtCustomColor, rtCameraDepth);
+            ConfigureTarget(rtCustomColor, rtDepth);
             ConfigureClear(ClearFlag.Color, new Color(0, 0, 0, 0));
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             CommandBuffer cmd = CommandBufferPool.Get();
-            // Set up profiling scope for Profiler & Frame Debugger
             using (new ProfilingScope(cmd, _profilingSampler))
             {
-                // Command buffer shouldn't contain anything, but apparently need to
-                // execute so DrawRenderers call is put under profiling scope title correctly
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
-                // Draw Renderers to Render Target (set up in OnCameraSetup)
                 SortingCriteria sortingCriteria = renderingData.cameraData.defaultOpaqueSortFlags;
                 DrawingSettings drawingSettings = CreateDrawingSettings(shaderTagsList, ref renderingData, sortingCriteria);
                 if (settings.overrideMaterial != null)
@@ -75,15 +71,19 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                 }
                 context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
 
-                // Pass our custom target to shaders as a Global Texture reference
-                // In a Shader Graph, you'd obtain this as a Texture2D property with "Exposed" unticked
                 if (settings.colorTargetDestinationID != "")
                     cmd.SetGlobalTexture(settings.colorTargetDestinationID, rtCustomColor);
 
-                // Apply material (e.g. Fullscreen Graph) to camera
                 if (settings.blitMaterial != null)
                 {
                     RTHandle camTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
+                    settings.blitMaterial.SetTexture("_DepthTexture", rtDepth);
+                    settings.blitMaterial.SetMatrix("_CamInvProjection", Matrix4x4.Inverse( renderingData.cameraData.camera.projectionMatrix));
+                    settings.blitMaterial.SetMatrix("_CamToWorld", renderingData.cameraData.camera.cameraToWorldMatrix);
+                    settings.blitMaterial.SetVector("_CamPosWS", renderingData.cameraData.camera.transform.position);
+                    settings.blitMaterial.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
+                    settings.blitMaterial.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
+                    settings.blitMaterial.SetFloat("_AtmosphereHeight", settings.AtmosphereHeight);
                     if (camTarget != null && rtTempColor != null)
                     {
                         Blitter.BlitCameraTexture(cmd, camTarget, rtTempColor, settings.blitMaterial, 0);
@@ -91,8 +91,6 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                     }
                 }
             }
-            // Execute Command Buffer one last time and release it
-            // (otherwise we get weird recursive list in Frame Debugger)
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             CommandBufferPool.Release(cmd);
@@ -125,6 +123,9 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
 
         [Header("Blit Settings")]
         public Material blitMaterial;
+
+        
+        public float AtmosphereHeight = 10;
     }
 
     public Settings settings = new Settings();
