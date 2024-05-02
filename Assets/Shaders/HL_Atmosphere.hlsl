@@ -126,8 +126,11 @@ out float volumeDepth, out float volumeDensity, out float3 inScatteredLight, out
         volumeDensity += LocalDensity(samplePos) * stepSize;
         float sunRayLength = RaySphere(float3(0, -EARTH_RADIUS, 0), EARTH_RADIUS + _AtmosphereHeight, samplePos, sunDir).y;
         float sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength);
-        viewRayOpticalDepth = OpticalDepth(pointInAtmosphere, rayDir, stepSize * i);
+        viewRayOpticalDepth = OpticalDepth(samplePos, -rayDir, stepSize * i);
         float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients);
+        if (length(transmittance) < 0.001)
+            continue;
+          
         inScatteredLight += transmittance * LocalDensity(samplePos) * stepSize;
   
         samplePos += rayDir * stepSize;
