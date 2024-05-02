@@ -78,12 +78,12 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                 {
                     RTHandle camTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
                     settings.blitMaterial.SetTexture("_DepthTexture", rtDepth);
-                    settings.blitMaterial.SetMatrix("_CamInvProjection", Matrix4x4.Inverse( renderingData.cameraData.camera.projectionMatrix));
-                    settings.blitMaterial.SetMatrix("_CamToWorld", renderingData.cameraData.camera.cameraToWorldMatrix);
                     settings.blitMaterial.SetVector("_CamPosWS", renderingData.cameraData.camera.transform.position);
                     settings.blitMaterial.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
                     settings.blitMaterial.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
                     settings.blitMaterial.SetFloat("_AtmosphereHeight", settings.AtmosphereHeight);
+                    settings.blitMaterial.SetFloat("_AtmosphereDensityFalloff", settings.AtmosphereDensityFalloff);
+
                     if (camTarget != null && rtTempColor != null)
                     {
                         Blitter.BlitCameraTexture(cmd, camTarget, rtTempColor, settings.blitMaterial, 0);
@@ -104,6 +104,7 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
             if (settings.colorTargetDestinationID != "")
                 rtCustomColor?.Release();
             rtTempColor?.Release();
+            rtDepth?.Release();
         }
     }
 
@@ -126,6 +127,8 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
 
         
         public float AtmosphereHeight = 10;
+        [Range (0,10)]
+        public float AtmosphereDensityFalloff = 1;
     }
 
     public Settings settings = new Settings();

@@ -3,64 +3,38 @@
 uniform float4 _BlitScaleBias;
 
 sampler2D _BlitTexture,_DepthTexture;
-float4x4 _CamInvProjection, _CamToWorld;
 float3 _CamPosWS;
 float _Camera_Near, _Camera_Far;
-float _AtmosphereHeight;
-struct Ray
+float _AtmosphereHeight, _AtmosphereDensityFalloff;
+
+#define MAX_DISTANCE 10000
+#define EARTH_RADIUS 1000
+
+float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, float3 rayDir)
 {
-    float3 origin;
-    float3 direction;
-};
-float2 PlaneRayIntersection(float3 normal, float3 position, float3 rayPosition, float3 rayDirection, float maxDist)
-{
-    float denominator = dot(normal, rayDirection);
-    float distToPlane;
-    float distThroughPlane;
-    if (abs(denominator) > 0.00001f)
+    float3 offset = rayOrigin - sphereCentre;
+    float a = 1; // Set to dot(rayDir, rayDir) if rayDir might not be normalized
+    float b = 2 * dot(offset, rayDir);
+    float c = dot(offset, offset) - sphereRadius * sphereRadius;
+    float d = b * b - 4 * a * c; // Discriminant from quadratic formula
+
+		// Number of intersections: 0 when d < 0; 1 when d = 0; 2 when d > 0
+    if (d > 0)
     {
-        float t = min(dot(position - rayPosition, normal) / denominator, maxDist);
-        if (rayPosition.y < position.y)
+        float s = sqrt(d);
+        float dstToSphereNear = max(0, (-b - s) / (2 * a));
+        float dstToSphereFar = (-b + s) / (2 * a);
+
+			// Ignore intersections that occur behind the ray
+        if (dstToSphereFar >= 0)
         {
-            distToPlane = 0;
-            distThroughPlane = t < 0 ? maxDist : min(t,maxDist);
-        }
-        else
-        {
-            distToPlane = t;
-            distThroughPlane = t > 0 ? maxDist : 0;
+            return float2(dstToSphereNear, dstToSphereFar - dstToSphereNear);
         }
     }
-
-    else
-    {
-        distToPlane = 0;
-        distThroughPlane = 0;
-    }
-    return float2(distToPlane, distThroughPlane);
-}
-float LocalDensity(float3 pos)
-{
-    float height01 = pos.y / _AtmosphereHeight;
-    return exp(-height01) * (1 - height01);
-
+		// Ray did not intersect sphere
+    return float2(MAX_DISTANCE, 0);
 }
 
-Ray CreateRay(float3 _origin, float3 _direction)
-{
-    Ray ray;
-    ray.origin = _origin;
-    ray.direction = _direction;
-    return ray;
-}
-Ray ComputeCameraRay(float2 uv)
-{
-    
-    float3 direction = mul(_CamInvProjection, float4(uv, 0, 1)).xyz;
-    direction = mul(_CamToWorld, float4(direction, 0)).xyz;
-    direction = normalize(direction);
-    return CreateRay(_CamPosWS, direction);
-}
 struct appdata
 {
     float4 positionOS : POSITION;
@@ -72,6 +46,7 @@ struct v2f
 {
     float2 uv : TEXCOORD0;
     float4 positionCS : SV_POSITION;
+    float3 viewDir : TEXCOORD1;
 };
 
 
@@ -91,6 +66,8 @@ v2f vert(appdata input)
 
     output.positionCS = pos;
     output.uv = uv * _BlitScaleBias.xy + _BlitScaleBias.zw;
+    float3 viewVector = mul(unity_CameraInvProjection, float4(uv.xy * 2 - 1, 0, -1));
+    output.viewDir = mul(unity_CameraToWorld, float4(viewVector, 0));
     return output;
 }
 inline float LinearEyeDepth(float depth)
@@ -103,45 +80,90 @@ inline float LinearEyeDepth(float depth)
     float w = y / _Camera_Far;
     return 1.0 / (z * depth + w);
 }
-void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float sceneDepth, float distanceThroughPlane, out float volumeDepth, out float volumeDensity)
+float LocalDensity(float3 pos)
 {
+    float heightAboveSurface = length(pos - float3(0, -EARTH_RADIUS, 0)) - EARTH_RADIUS;
+    float height01 = heightAboveSurface / _AtmosphereHeight;
+    return exp(-height01 * _AtmosphereDensityFalloff) * (1 - height01);
+
+}
+float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength)
+{
+    float3 densitySamplePoint = rayOrigin;
+    int numOpticalDepthPoints = 10;
+    float stepSize = rayLength / (numOpticalDepthPoints - 1);
+    float opticalDepth = 0;
+
+    for (int i = 0; i < numOpticalDepthPoints; i++)
+    {
+        float localDensity = LocalDensity(densitySamplePoint);
+        opticalDepth += localDensity * stepSize;
+        densitySamplePoint += rayDir * stepSize;
+    }
+    return opticalDepth;
+}
+
+
+
+void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float3 sunDir, float distanceThroughPlane, out float volumeDepth, out float volumeDensity, out float3 inScatteredLight)
+{
+    
+    float3 scatteringCoefficients = float3(700, 530, 440);
+    scatteringCoefficients = pow(150/ scatteringCoefficients, 4) * 1;
     float3 samplePos = pointInAtmosphere;
     volumeDepth = 0;
     volumeDensity = 0;
-    float numInScatterPoints = 10;
-    float stepSize = distanceThroughPlane / numInScatterPoints;
+    inScatteredLight = 0;
+    
+    int numInScatterPoints = 10;
+    float stepSize = distanceThroughPlane / (numInScatterPoints-1);
+    
     
     for (int i = 0; i < numInScatterPoints; i++)
     {
         volumeDepth += stepSize;
         volumeDensity += LocalDensity(samplePos) * stepSize;
-        if (volumeDepth > distanceThroughPlane)
-            break;
-        samplePos = pointInAtmosphere + rayDir * volumeDepth;
+        float sunRayLength = RaySphere(float3(0, -EARTH_RADIUS, 0), EARTH_RADIUS + _AtmosphereHeight, samplePos, sunDir).y;
+        float sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength);
+        float viewRayOpticalDepth = OpticalDepth(pointInAtmosphere, rayDir, stepSize * i);
+        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients);
+        inScatteredLight += transmittance * LocalDensity(samplePos) * stepSize;
+  
+        samplePos += rayDir * stepSize;
     }
-   
+    inScatteredLight *= scatteringCoefficients * 1.5;
 }
 
 float4 frag(v2f i) : SV_Target
 {
-    float4 col = tex2D(_BlitTexture, i.uv);
-    float sceneDepthNonLinear = tex2D(_DepthTexture, i.uv);
-    float sceneDepth = LinearEyeDepth(sceneDepthNonLinear);
-   
-    Ray camRay = ComputeCameraRay(i.uv * 2 - 1);
+    float3 rayOrigin = _WorldSpaceCameraPos;
+    float3 rayDir = normalize(i.viewDir);
     
-    float maxDistance = 1000;
+    float4 col = tex2D(_BlitTexture, i.uv);
+    float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
+    float sceneDepthNonLinear = tex2D(_DepthTexture, i.uv);
+    float sceneDepth = LinearEyeDepth(sceneDepthNonLinear) / dot(rayDir, forward);
 
-    float2 hitInfo = PlaneRayIntersection(float3(0, 1, 0), float3(0, _AtmosphereHeight, 0), camRay.origin, camRay.direction,maxDistance);
-    float distanceToPlane = hitInfo.x;
-    float distanceThroughPlane = min(hitInfo.y, max(sceneDepth - distanceToPlane, 0));
-    float3 pointInAtmosphere = camRay.origin + camRay.direction * (distanceToPlane + 0.001);
+    Light mainLight = GetMainLight();
+
+    float2 hitInfo = RaySphere(float3(0, -EARTH_RADIUS, 0),EARTH_RADIUS +_AtmosphereHeight, rayOrigin, rayDir);
+    float distanceToSphere = hitInfo.x;
+    float distanceThroughSphere = min(hitInfo.y,sceneDepth - distanceToSphere);
+    float3 pointInAtmosphere = rayOrigin + rayDir * (distanceToSphere + 0.001);
     
     float volumeDepth;
     float volumeDensity;
-    CalculateLight(pointInAtmosphere, camRay.direction, sceneDepth, distanceThroughPlane,volumeDepth,volumeDensity);
-    return volumeDensity.xxxx / 10;
-    //return volumeDepth.xxxx / 10;
-    return col + volumeDepth.xxxx / 100;
+    float3 inScatteredLight;
+    CalculateLight(pointInAtmosphere, rayDir, mainLight.direction, distanceThroughSphere, volumeDepth, volumeDensity, inScatteredLight);
+    if (distanceThroughSphere > 0)
+    {
+        return inScatteredLight.xyzz;
+        return col + volumeDensity.xxxx / 100;
+    }
+    else
+    {
+        return col;
+    }
+
 }
 #endif
