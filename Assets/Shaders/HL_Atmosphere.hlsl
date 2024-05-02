@@ -8,7 +8,7 @@ float _Camera_Near, _Camera_Far;
 float _AtmosphereHeight, _AtmosphereDensityFalloff;
 
 #define MAX_DISTANCE 10000
-#define EARTH_RADIUS 1000
+#define EARTH_RADIUS 10000
 
 float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, float3 rayDir)
 {
@@ -105,7 +105,8 @@ float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength)
 
 
 
-void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float3 sunDir, float distanceThroughPlane, out float volumeDepth, out float volumeDensity, out float3 inScatteredLight)
+void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float3 sunDir, float distanceThroughPlane, float3 originalCol,
+out float volumeDepth, out float volumeDensity, out float3 inScatteredLight, out float3 finalColor)
 {
     
     float3 scatteringCoefficients = float3(700, 530, 440);
@@ -114,7 +115,7 @@ void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float3 sunDir, floa
     volumeDepth = 0;
     volumeDensity = 0;
     inScatteredLight = 0;
-    
+    float viewRayOpticalDepth = 0;
     int numInScatterPoints = 10;
     float stepSize = distanceThroughPlane / (numInScatterPoints-1);
     
@@ -125,13 +126,16 @@ void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float3 sunDir, floa
         volumeDensity += LocalDensity(samplePos) * stepSize;
         float sunRayLength = RaySphere(float3(0, -EARTH_RADIUS, 0), EARTH_RADIUS + _AtmosphereHeight, samplePos, sunDir).y;
         float sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength);
-        float viewRayOpticalDepth = OpticalDepth(pointInAtmosphere, rayDir, stepSize * i);
+        viewRayOpticalDepth = OpticalDepth(pointInAtmosphere, rayDir, stepSize * i);
         float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients);
         inScatteredLight += transmittance * LocalDensity(samplePos) * stepSize;
   
         samplePos += rayDir * stepSize;
     }
-    inScatteredLight *= scatteringCoefficients * 1.5;
+    inScatteredLight *= scatteringCoefficients * 1;
+    float3 sceneColor = originalCol * exp(-viewRayOpticalDepth * scatteringCoefficients);
+    finalColor = sceneColor + inScatteredLight;
+
 }
 
 float4 frag(v2f i) : SV_Target
@@ -154,16 +158,8 @@ float4 frag(v2f i) : SV_Target
     float volumeDepth;
     float volumeDensity;
     float3 inScatteredLight;
-    CalculateLight(pointInAtmosphere, rayDir, mainLight.direction, distanceThroughSphere, volumeDepth, volumeDensity, inScatteredLight);
-    if (distanceThroughSphere > 0)
-    {
-        return inScatteredLight.xyzz;
-        return col + volumeDensity.xxxx / 100;
-    }
-    else
-    {
-        return col;
-    }
-
+    float3 finalColor;
+    CalculateLight(pointInAtmosphere, rayDir, mainLight.direction, distanceThroughSphere, col, volumeDepth, volumeDensity, inScatteredLight,finalColor);
+    return finalColor.xyzz;
 }
 #endif

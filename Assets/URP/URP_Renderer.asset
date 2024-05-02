@@ -23,8 +23,8 @@ MonoBehaviour:
     overrideMaterialPass: 0
     colorTargetDestinationID: _CustomColor
     blitMaterial: {fileID: 2100000, guid: 701dc9119cf44b0419336c6e718a656e, type: 2}
-    AtmosphereHeight: 300
-    AtmosphereDensityFalloff: 4.07
+    AtmosphereHeight: 242
+    AtmosphereDensityFalloff: 3
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
