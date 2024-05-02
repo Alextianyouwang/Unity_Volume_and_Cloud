@@ -82,7 +82,13 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                     settings.blitMaterial.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
                     settings.blitMaterial.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
                     settings.blitMaterial.SetFloat("_AtmosphereHeight", settings.AtmosphereHeight);
+                    settings.blitMaterial.SetFloat("_EarthRadius", settings.EarthRadius);
                     settings.blitMaterial.SetFloat("_AtmosphereDensityFalloff", settings.AtmosphereDensityFalloff);
+                    settings.blitMaterial.SetVector("_WaveLength", settings.WaveLength);
+                    settings.blitMaterial.SetFloat("_ScatterIntensity", settings.ScatterIntensity);
+                    settings.blitMaterial.SetFloat("_FinalColorMultiplier", settings.FinalColorMultiplier);
+                    settings.blitMaterial.SetInt("_NumOutScatteringSample", settings.OutScatteringSamples);
+                    settings.blitMaterial.SetInt("_NumInScatteringSample", settings.InScatteringSamples);
 
                     if (camTarget != null && rtTempColor != null)
                     {
@@ -96,9 +102,8 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
             CommandBufferPool.Release(cmd);
         }
 
-        public override void OnCameraCleanup(CommandBuffer cmd) { }
-
-        // Cleanup Called by feature below
+        public override void OnCameraCleanup(CommandBuffer cmd) {
+        }
         public void Dispose()
         {
             if (settings.colorTargetDestinationID != "")
@@ -107,9 +112,6 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
             rtDepth?.Release();
         }
     }
-
-    // Exposed Settings
-
     [System.Serializable]
     public class Settings
     {
@@ -127,8 +129,18 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
 
         
         public float AtmosphereHeight = 10;
+        public float EarthRadius = 10000;
         [Range (0,10)]
         public float AtmosphereDensityFalloff = 1;
+        [Range (0,10)]
+        public float ScatterIntensity = 1;
+        [Range(0, 3)]
+        public float FinalColorMultiplier = 1;
+        [Range(1, 30)]
+        public int OutScatteringSamples = 10;
+        [Range(1, 30)]
+        public int InScatteringSamples = 10;
+        public Vector3 WaveLength = new Vector3(700, 530, 440);
     }
 
     public Settings settings = new Settings();
