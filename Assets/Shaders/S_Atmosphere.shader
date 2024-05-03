@@ -2,8 +2,6 @@ Shader "Hidden/S_Atmosphere"
 {
     Properties
     {
-        [HideInInspector]_BlitTexture ("Texture", 2D) = "white" {}
-        [HideInInspector]_DepthTexture ("Texture", 2D) = "white" {}
     }
     SubShader
     {

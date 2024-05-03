@@ -1,7 +1,7 @@
 #ifndef ATMOSPHERE_INCLUDE
 #define ATMOSPHERE_INCLUDE
 uniform float4 _BlitScaleBias;
-sampler2D _BlitTexture,_DepthTexture;
+sampler2D _CameraOpaqueTexture, _DepthTexture;
 float3 _WaveLength;
 float _ScatterIntensity, _FinalColorMultiplier, _AtmosphereHeight, _AtmosphereDensityFalloff,_EarthRadius,_AnisotropicScattering;
 float _Camera_Near, _Camera_Far;
@@ -151,7 +151,7 @@ float4 frag(v2f i) : SV_Target
     float3 rayOrigin = _WorldSpaceCameraPos;
     float3 rayDir = normalize(i.viewDir);
     
-    float4 col = tex2D(_BlitTexture, i.uv);
+    float4 col = tex2D(_CameraOpaqueTexture, i.uv);
     float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
     float sceneDepthNonLinear = tex2D(_DepthTexture, i.uv);
     float sceneDepth = LinearEyeDepth(sceneDepthNonLinear) / dot(rayDir, forward);
@@ -160,7 +160,7 @@ float4 frag(v2f i) : SV_Target
 
     float2 hitInfo = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _AtmosphereHeight, rayOrigin, rayDir);
     float distanceToSphere = hitInfo.x;
-    float distanceThroughSphere = min(hitInfo.y,sceneDepth - distanceToSphere);
+    float distanceThroughSphere = min(hitInfo.y, max(sceneDepth - distanceToSphere,0));
     float3 pointInAtmosphere = rayOrigin + rayDir * (distanceToSphere + 0.001);
     float3 inScatteredLight;
     float3 finalColor;

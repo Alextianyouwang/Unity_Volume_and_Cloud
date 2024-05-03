@@ -13,24 +13,17 @@ MonoBehaviour:
   m_Name: VolumetricAtmosphere
   m_EditorClassIdentifier: 
   m_Active: 1
-  settings:
+  _settings:
     showInSceneView: 1
-    _event: 450
-    layerMask:
-      serializedVersion: 2
-      m_Bits: 0
-    overrideMaterial: {fileID: 0}
-    overrideMaterialPass: 0
-    colorTargetDestinationID: _CustomColor
-    blitMaterial: {fileID: 2100000, guid: 701dc9119cf44b0419336c6e718a656e, type: 2}
-    AtmosphereHeight: 200
-    EarthRadius: 3000
-    AtmosphereDensityFalloff: 7.98
-    ScatterIntensity: 4.82
-    FinalColorMultiplier: 2.311
-    OpticalDepthSamples: 10
+    _event: 500
+    AtmosphereHeight: 300
+    EarthRadius: 10000
+    AtmosphereDensityFalloff: 7.38
+    ScatterIntensity: 3.61
+    FinalColorMultiplier: 2.37
+    OpticalDepthSamples: 14
     InScatteringSamples: 10
-    AnisotropicScatterig: 0.1
+    AnisotropicScatterig: 0.062
     WaveLength: {x: 700, y: 530, z: 440}
 --- !u!114 &11400000
 MonoBehaviour:
