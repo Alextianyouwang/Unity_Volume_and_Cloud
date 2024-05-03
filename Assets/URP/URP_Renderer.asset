@@ -19,11 +19,11 @@ MonoBehaviour:
     AtmosphereHeight: 300
     EarthRadius: 10000
     AtmosphereDensityFalloff: 7.38
-    ScatterIntensity: 3.61
-    FinalColorMultiplier: 2.37
-    OpticalDepthSamples: 14
+    ScatterIntensity: 4.28
+    FinalColorMultiplier: 1.726
+    OpticalDepthSamples: 10
     InScatteringSamples: 10
-    AnisotropicScatterig: 0.062
+    AnisotropicScatterig: 0.1
     WaveLength: {x: 700, y: 530, z: 440}
 --- !u!114 &11400000
 MonoBehaviour:
