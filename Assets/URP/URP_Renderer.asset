@@ -23,13 +23,14 @@ MonoBehaviour:
     overrideMaterialPass: 0
     colorTargetDestinationID: _CustomColor
     blitMaterial: {fileID: 2100000, guid: 701dc9119cf44b0419336c6e718a656e, type: 2}
-    AtmosphereHeight: 300
+    AtmosphereHeight: 200
     EarthRadius: 3000
-    AtmosphereDensityFalloff: 7.49
-    ScatterIntensity: 4.68
-    FinalColorMultiplier: 1.119
-    OutScatteringSamples: 10
+    AtmosphereDensityFalloff: 7.98
+    ScatterIntensity: 4.82
+    FinalColorMultiplier: 2.311
+    OpticalDepthSamples: 10
     InScatteringSamples: 10
+    AnisotropicScatterig: 0.1
     WaveLength: {x: 700, y: 530, z: 440}
 --- !u!114 &11400000
 MonoBehaviour:

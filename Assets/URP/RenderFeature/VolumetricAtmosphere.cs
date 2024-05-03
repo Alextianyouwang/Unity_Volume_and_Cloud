@@ -78,7 +78,6 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                 {
                     RTHandle camTarget = renderingData.cameraData.renderer.cameraColorTargetHandle;
                     settings.blitMaterial.SetTexture("_DepthTexture", rtDepth);
-                    settings.blitMaterial.SetVector("_CamPosWS", renderingData.cameraData.camera.transform.position);
                     settings.blitMaterial.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
                     settings.blitMaterial.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
                     settings.blitMaterial.SetFloat("_AtmosphereHeight", settings.AtmosphereHeight);
@@ -87,7 +86,8 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                     settings.blitMaterial.SetVector("_WaveLength", settings.WaveLength);
                     settings.blitMaterial.SetFloat("_ScatterIntensity", settings.ScatterIntensity);
                     settings.blitMaterial.SetFloat("_FinalColorMultiplier", settings.FinalColorMultiplier);
-                    settings.blitMaterial.SetInt("_NumOutScatteringSample", settings.OutScatteringSamples);
+                    settings.blitMaterial.SetFloat("_AnisotropicScattering", settings.AnisotropicScatterig);
+                    settings.blitMaterial.SetInt("_NumOpticalDepthSample", settings.OpticalDepthSamples);
                     settings.blitMaterial.SetInt("_NumInScatteringSample", settings.InScatteringSamples);
 
                     if (camTarget != null && rtTempColor != null)
@@ -137,9 +137,11 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
         [Range(0, 3)]
         public float FinalColorMultiplier = 1;
         [Range(1, 30)]
-        public int OutScatteringSamples = 10;
+        public int OpticalDepthSamples = 10;
         [Range(1, 30)]
         public int InScatteringSamples = 10;
+        [Range(0, 1)]
+        public float AnisotropicScatterig = 0;
         public Vector3 WaveLength = new Vector3(700, 530, 440);
     }
 

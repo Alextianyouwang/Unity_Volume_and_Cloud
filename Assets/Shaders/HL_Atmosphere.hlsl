@@ -2,13 +2,24 @@
 #define ATMOSPHERE_INCLUDE
 uniform float4 _BlitScaleBias;
 sampler2D _BlitTexture,_DepthTexture;
-float3 _CamPosWS;
 float3 _WaveLength;
-float _ScatterIntensity, _FinalColorMultiplier, _AtmosphereHeight, _AtmosphereDensityFalloff,_EarthRadius;
+float _ScatterIntensity, _FinalColorMultiplier, _AtmosphereHeight, _AtmosphereDensityFalloff,_EarthRadius,_AnisotropicScattering;
 float _Camera_Near, _Camera_Far;
-int _NumInScatteringSample, _NumOutScatteringSample;
+int _NumInScatteringSample, _NumOpticalDepthSample;
 
 #define MAX_DISTANCE 10000
+
+float PhaseFunction(float costheta, float g)
+{
+    float g2 = g * g;
+    return (1 - g2) / ( pow((1 + g2 - 2 * g * costheta), 1.5)) * 0.5;
+
+}
+float AngleBetweenVectors(float3 vec1, float3 vec2)
+{
+    float dotProduct = dot(normalize(vec1), normalize(vec2));
+    return acos(dotProduct);
+}
 
 float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, float3 rayDir)
 {
@@ -91,10 +102,10 @@ float LocalDensity(float3 pos)
 float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength)
 {
     float3 densitySamplePoint = rayOrigin;
-    float stepSize = rayLength / (_NumOutScatteringSample - 1);
+    float stepSize = rayLength / (_NumOpticalDepthSample - 1);
     float opticalDepth = 0;
 
-    for (int i = 0; i <_NumOutScatteringSample; i++)
+    for (int i = 0; i < _NumOpticalDepthSample; i++)
     {
         float localDensity = LocalDensity(densitySamplePoint);
         opticalDepth += localDensity * stepSize;
@@ -115,21 +126,23 @@ void CalculateLight(float3 pointInAtmosphere, float3 rayDir, float3 sunDir, floa
     float viewRayOpticalDepth = 0;
     float stepSize = distanceThroughPlane / (_NumInScatteringSample - 1);
     
-    
+    float phase = PhaseFunction(dot(sunDir, rayDir), _AnisotropicScattering);
     for (int i = 0; i <_NumInScatteringSample; i++)
     {
         float sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _AtmosphereHeight, samplePos, sunDir).y;
         float sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength);
         viewRayOpticalDepth = OpticalDepth(samplePos, -rayDir, stepSize * i);
+
+
         float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * scatteringCoefficients);
     
-        inScatteredLight += length(transmittance) < 0.001 ? 0: transmittance * LocalDensity(samplePos) * stepSize;
+        inScatteredLight += length(transmittance) < 0.001 ? 0 : transmittance * LocalDensity(samplePos) * stepSize;
   
         samplePos += rayDir * stepSize;
     }
-    inScatteredLight *= scatteringCoefficients * _FinalColorMultiplier * sunColor;
+    inScatteredLight *= scatteringCoefficients * _FinalColorMultiplier * sunColor * phase;
     float3 sceneColor = originalCol * exp(-viewRayOpticalDepth * scatteringCoefficients);
-    finalColor = sceneColor + inScatteredLight;
+    finalColor = (sceneColor + inScatteredLight);
 
 }
 
