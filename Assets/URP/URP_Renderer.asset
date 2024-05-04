@@ -15,16 +15,17 @@ MonoBehaviour:
   m_Active: 1
   _settings:
     showInSceneView: 1
-    _event: 500
-    AtmosphereHeight: 300
+    _event: 450
+    AtmosphereHeight: 50
     EarthRadius: 10000
-    AtmosphereDensityFalloff: 7.38
-    ScatterIntensity: 4.28
-    FinalColorMultiplier: 1.726
+    AtmosphereDensityFalloff: 8
+    InscatteringTint: {r: 0.6226415, g: 0.6226415, b: 0.6226415, a: 0}
+    Absorbsion: 0.252
+    AnisotropicLevel: 0.1
+    RayleighScattering: 1
+    RayleighScatterWeightPerChannel: {r: 0.25943398, g: 0.6035353, b: 1, a: 0}
     OpticalDepthSamples: 10
     InScatteringSamples: 10
-    AnisotropicScatterig: 0.1
-    WaveLength: {x: 700, y: 530, z: 440}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

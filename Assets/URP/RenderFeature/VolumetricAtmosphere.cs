@@ -43,10 +43,12 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
                     _blitMat.SetFloat("_AtmosphereHeight", _settings.AtmosphereHeight);
                     _blitMat.SetFloat("_EarthRadius", _settings.EarthRadius);
                     _blitMat.SetFloat("_AtmosphereDensityFalloff", _settings.AtmosphereDensityFalloff);
-                    _blitMat.SetVector("_WaveLength", _settings.WaveLength);
-                    _blitMat.SetFloat("_ScatterIntensity", _settings.ScatterIntensity);
-                    _blitMat.SetFloat("_FinalColorMultiplier", _settings.FinalColorMultiplier);
-                    _blitMat.SetFloat("_AnisotropicScattering", _settings.AnisotropicScatterig);
+                    _blitMat.SetFloat("_ScatterIntensity", _settings.Absorbsion);
+                    _blitMat.SetFloat("_AnisotropicScattering", _settings.AnisotropicLevel);
+                    _blitMat.SetFloat("_AtmosphereDensityMultiplier", _settings.AtmosphereDensityMultiplier);
+                    _blitMat.SetFloat("_RayleighStrength", _settings.RayleighScattering);
+                    _blitMat.SetColor("_RayleighScatterWeight", _settings.RayleighScatterWeightPerChannel);
+                    _blitMat.SetColor("_InsColor", _settings.InscatteringTint);
                     _blitMat.SetInt("_NumOpticalDepthSample", _settings.OpticalDepthSamples);
                     _blitMat.SetInt("_NumInScatteringSample", _settings.InScatteringSamples);
 
@@ -75,22 +77,31 @@ public class VolumetricAtmosphere : ScriptableRendererFeature
         public bool showInSceneView = true;
         public RenderPassEvent _event = RenderPassEvent.AfterRenderingOpaques;
 
-
+        [Header ("Configuration")]
         public float AtmosphereHeight = 10;
         public float EarthRadius = 10000;
         [Range(1, 10)]
         public float AtmosphereDensityFalloff = 1;
-        [Range(0, 10)]
-        public float ScatterIntensity = 1;
-        [Range(0, 3)]
-        public float FinalColorMultiplier = 1;
+        [Range(0,3)]
+        public float AtmosphereDensityMultiplier = 1;
+
+        [Header("Shading")]
+        [ColorUsage(true, true)]
+        public Color InscatteringTint;
+        [Range(0, 1)]
+        public float Absorbsion = 0.1f;
+        [Range(0, 1)]
+        public float AnisotropicLevel = 0;
+        [Range(0, 1)]
+        public float RayleighScattering = 1;
+        public Color RayleighScatterWeightPerChannel;
+
+
+        [Header("Quality")]
         [Range(1, 30)]
         public int OpticalDepthSamples = 10;
         [Range(1, 30)]
         public int InScatteringSamples = 10;
-        [Range(0, 1)]
-        public float AnisotropicScatterig = 0;
-        public Vector3 WaveLength = new Vector3(700, 530, 440);
     }
 
 
