@@ -135,7 +135,8 @@ void CalCulateHeightFogLight(float3 rayOrigin, float3 rayDir, float3 sunDir, flo
         viewRayOpticalDepth = OpticalDepth(samplePos, -rayDir, stepSize * i);
         
         float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatterIntensity * scatteringWeight);
-        inscatteredLight += transmittance * LocalDensity(samplePos) * stepSize * phase * scatteringWeight * _InsColor.xyz;
+
+         inscatteredLight += transmittance * LocalDensity(samplePos) * stepSize * phase * scatteringWeight * _InsColor.xyz;
         samplePos += rayDir * stepSize;
     }
     inscatteredLight += originalColor * exp(-viewRayOpticalDepth * scatteringWeight * _ScatterIntensity);
