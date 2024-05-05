@@ -13,20 +13,8 @@ MonoBehaviour:
   m_Name: VolumetricAtmosphere
   m_EditorClassIdentifier: 
   m_Active: 1
-  _settings:
-    showInSceneView: 1
-    _event: 450
-    AtmosphereHeight: 300
-    EarthRadius: 10000
-    AtmosphereDensityFalloff: 1
-    AtmosphereDensityMultiplier: 0.422
-    InscatteringTint: {r: 0.034754366, g: 0.053926367, b: 0.103773594, a: 0}
-    Absorbsion: 0.033
-    AnisotropicLevel: 0.1
-    RayleighScattering: 1
-    RayleighScatterWeightPerChannel: {r: 0.36739054, g: 0.44405532, b: 0.70980394, a: 0}
-    OpticalDepthSamples: 10
-    InScatteringSamples: 30
+  showInSceneView: 1
+  _event: 500
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

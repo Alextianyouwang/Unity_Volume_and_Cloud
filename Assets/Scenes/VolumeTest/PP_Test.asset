@@ -1,5 +1,54 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8889827133064976308
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 859ab6eb70963d147b95c5aac902cd1e, type: 3}
+  m_Name: VolumetricAtmosphereComponent
+  m_EditorClassIdentifier: 
+  active: 1
+  Enabled:
+    m_OverrideState: 1
+    m_Value: 1
+  AtmosphereHeight:
+    m_OverrideState: 1
+    m_Value: 50
+  EarthRadius:
+    m_OverrideState: 1
+    m_Value: 5000
+  AtmosphereDensityFalloff:
+    m_OverrideState: 1
+    m_Value: 1
+  AtmosphereDensityMultiplier:
+    m_OverrideState: 1
+    m_Value: 1
+  InscatteringTint:
+    m_OverrideState: 1
+    m_Value: {r: 0.3, g: 0.3, b: 0.3, a: 1}
+  UniformAbsorbsion:
+    m_OverrideState: 1
+    m_Value: 0.1
+  RayleighScattering:
+    m_OverrideState: 1
+    m_Value: 1
+  RayleighAbsorbsionWeightPerChannel:
+    m_OverrideState: 1
+    m_Value: {r: 0.01, g: 0.05, b: 0.2, a: 1}
+  AnisotropicLevel:
+    m_OverrideState: 1
+    m_Value: 0.1
+  OpticalDepthSamples:
+    m_OverrideState: 1
+    m_Value: 10
+  InScatteringSamples:
+    m_OverrideState: 1
+    m_Value: 30
 --- !u!114 &-8592638148125547760
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -62,6 +111,7 @@ MonoBehaviour:
   components:
   - {fileID: 4122951676378206706}
   - {fileID: -8592638148125547760}
+  - {fileID: -8889827133064976308}
 --- !u!114 &4122951676378206706
 MonoBehaviour:
   m_ObjectHideFlags: 3
