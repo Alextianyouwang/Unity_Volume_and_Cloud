@@ -2,23 +2,24 @@
 #define ATMOSPHERE_INCLUDE
 uniform float4 _BlitScaleBias;
 sampler2D _CameraOpaqueTexture, _DepthTexture;
-float _ScatterIntensity, _AtmosphereHeight, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier, _EarthRadius, _AnisotropicScattering, _RayleighStrength;
-float _Camera_Near, _Camera_Far;
+float _ScatterIntensity, _Rs_Thickness, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier;
+float4 _RayleighScatterWeight, _InsColor;
+float _Camera_Near, _Camera_Far, _EarthRadius;
 int _NumInScatteringSample, _NumOpticalDepthSample;
-float4 _RayleighScatterWeight,_InsColor;
+
+
+float _Ms_Absorbsion, _Ms_Thickness, _Ms_DensityFalloff, _Ms_DensityMultiplier, _Ms_Anisotropic;
+float4 _Ms_InsColor;
 
 #define MAX_DISTANCE 10000
 
+//developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-16-accurate-atmospheric-scattering
 float PhaseFunction(float costheta, float g)
 {
     float g2 = g * g;
-    return (1 - g2) / ( pow((1 + g2 - 2 * g * costheta), 1.5)) * 0.5;
+    float symmetry = (3 * (1 - g2)) / (2 * (2 + g2));
+    return (1 + costheta * costheta) / pow(1 + g2 - 2 * g * costheta, 1.5);
 
-}
-float AngleBetweenVectors(float3 vec1, float3 vec2)
-{
-    float dotProduct = dot(normalize(vec1), normalize(vec2));
-    return acos(dotProduct);
 }
 
 float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, float3 rayDir)
@@ -91,23 +92,23 @@ inline float LinearEyeDepth(float depth)
     float w = y / _Camera_Far;
     return 1.0 / (z * depth + w);
 }
-float LocalDensity(float3 pos)
+float LocalDensity(float3 pos, float relativeHeight, float falloff, float multiplier)
 {
     float distToCenter = length(pos - float3(0, -_EarthRadius, 0));
     float heightAboveSurface = max(distToCenter - _EarthRadius,0);
-    float height01 =  heightAboveSurface / _AtmosphereHeight;
-    return exp(-height01 * _AtmosphereDensityFalloff) * (1 - height01) *_AtmosphereDensityMultiplier;
+    float height01 = clamp(heightAboveSurface / relativeHeight,0,1);
+    return exp(-height01 * falloff) * (1 - height01) * multiplier;
 
 }
-float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength)
+float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength, float relativeHeight, int samples, float falloff, float multiplier)
 {
     float3 densitySamplePoint = rayOrigin;
-    float stepSize = rayLength / (_NumOpticalDepthSample - 1);
+    float stepSize = rayLength / (samples - 1);
     float opticalDepth = 0;
 
-    for (int i = 0; i < _NumOpticalDepthSample; i++)
+    for (int i = 0; i < samples; i++)
     {
-        float localDensity = LocalDensity(densitySamplePoint);
+        float localDensity = LocalDensity(densitySamplePoint,relativeHeight,falloff,multiplier);
         opticalDepth += localDensity * stepSize;
         densitySamplePoint += rayDir * stepSize;
     }
@@ -117,30 +118,41 @@ float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength)
 
 
 
-void CalCulateHeightFogLight(float3 rayOrigin, float3 rayDir, float3 sunDir, float distance, float3 originalColor,
- out float3 inscatteredLight)
+void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, float distance,
+ out float3 inscatteredLight, out float3 transmittance)
 {
     float stepSize = distance / (_NumInScatteringSample - 1);
     float3 samplePos = rayOrigin;
-    float phase = PhaseFunction(dot(sunDir, rayDir), _AnisotropicScattering);
-    float viewRayOpticalDepth = 0;
-    float3 scatteringWeight = lerp(1, _RayleighScatterWeight.xyz, _RayleighStrength);
+    float rs_phase = PhaseFunction(dot(sunDir, rayDir), 0);
+    float ms_phase = PhaseFunction(dot(sunDir, rayDir), _Ms_Anisotropic);
+    float3 rs_scatteringWeight = _RayleighScatterWeight.xyz * _ScatterIntensity;
+    float rs_viewRayOpticalDepth = 0;
+    float ms_viewRayOpticalDepth = 0;
+    float3 rs_inscatterLight = 0;
+    float3 ms_inscatterLight = 0;
     for (int i = 0; i < _NumInScatteringSample; i++)
     {
-         Light mainLight = GetMainLight(TransformWorldToShadowCoord(samplePos));
-        
-        float localDensity = LocalDensity(samplePos) * stepSize;
-        float sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _AtmosphereHeight, samplePos, sunDir).y;
-        float sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength);
-        viewRayOpticalDepth = OpticalDepth(samplePos, -rayDir, stepSize * i);
-        
-        float3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * _ScatterIntensity * scatteringWeight);
+        float rs_localDensity = LocalDensity(samplePos, _Rs_Thickness, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier) * stepSize;
+        float ms_localDensity = LocalDensity(samplePos, _Ms_Thickness, _Ms_DensityFalloff, _Ms_DensityMultiplier) * stepSize;
+    
+        rs_viewRayOpticalDepth += rs_localDensity;
+        ms_viewRayOpticalDepth += ms_localDensity;
 
-         inscatteredLight += transmittance * LocalDensity(samplePos) * stepSize * phase * scatteringWeight * _InsColor.xyz;
+        float sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Rs_Thickness, samplePos, sunDir).y;
+        float ms_sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Ms_Thickness, samplePos, sunDir).y;
+        float rs_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength, _Rs_Thickness, _NumOpticalDepthSample, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier);
+        float ms_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength, _Ms_Thickness, _NumOpticalDepthSample, _Ms_DensityFalloff, _Ms_DensityMultiplier);
+        float3 rs_transmittance = exp(-(rs_sunRayOpticalDepth + rs_viewRayOpticalDepth) * rs_scatteringWeight);
+        float ms_transmittance = exp(-(ms_sunRayOpticalDepth + ms_viewRayOpticalDepth) * _Ms_Absorbsion);
+       
+        rs_inscatterLight += rs_transmittance * rs_localDensity;
+        ms_inscatterLight += ms_transmittance * ms_localDensity;
         samplePos += rayDir * stepSize;
     }
-    inscatteredLight += originalColor * exp(-viewRayOpticalDepth * scatteringWeight * _ScatterIntensity);
-
+    rs_inscatterLight *= rs_phase * rs_scatteringWeight * _InsColor.xyz;
+    ms_inscatterLight *= ms_phase * (_Ms_Absorbsion / 3.0) * _Ms_InsColor.xyz;
+    transmittance = exp(-rs_viewRayOpticalDepth * rs_scatteringWeight);
+    inscatteredLight =   ms_inscatterLight + rs_inscatterLight;
 }
 
 float4 frag(v2f i) : SV_Target
@@ -155,14 +167,14 @@ float4 frag(v2f i) : SV_Target
 
     Light mainLight = GetMainLight();
 
-    float2 hitInfo = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _AtmosphereHeight, rayOrigin, rayDir);
-    float distanceToSphere = hitInfo.x;
-    float distanceThroughSphere = min(hitInfo.y, max(sceneDepth - distanceToSphere,0));
-    float3 pointInAtmosphere = rayOrigin + rayDir * distanceToSphere;
-    float3 inScatteredLight;
-    float3 finalColor;
+    float2 hitInfo = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Rs_Thickness, rayOrigin, rayDir);
+    float distThroughVolume = min(hitInfo.y, max(sceneDepth - hitInfo.x, 0));
+    float3 marchStart = rayOrigin + rayDir * (hitInfo.x+ 0.01);
+    float3 inscatteredLight;
+    float3 transmittance;
+    AtmosphereicScattering(marchStart, rayDir, mainLight.direction, distThroughVolume, inscatteredLight,transmittance);
 
-    CalCulateHeightFogLight(pointInAtmosphere, rayDir, mainLight.direction, distanceThroughSphere, col, finalColor);
-    return finalColor.xyzz;
+    float3 finalCol = inscatteredLight + transmittance * col.xyz ;
+    return finalCol.xyzz;
 }
 #endif

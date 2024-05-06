@@ -42,17 +42,25 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
                 _blitMat.SetTexture("_DepthTexture", renderingData.cameraData.renderer.cameraDepthTargetHandle);
                 _blitMat.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
                 _blitMat.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
-                _blitMat.SetFloat("_AtmosphereHeight", settings.AtmosphereHeight.value);
                 _blitMat.SetFloat("_EarthRadius", settings.EarthRadius.value);
+
+                _blitMat.SetFloat("_Rs_Thickness", settings.AtmosphereHeight.value);
                 _blitMat.SetFloat("_AtmosphereDensityFalloff", settings.AtmosphereDensityFalloff.value);
-                _blitMat.SetFloat("_ScatterIntensity", settings.UniformAbsorbsion.value);
-                _blitMat.SetFloat("_AnisotropicScattering", settings.AnisotropicLevel.value);
+                _blitMat.SetFloat("_ScatterIntensity", settings.AtmosphereUniformAbsorbsion.value);
                 _blitMat.SetFloat("_AtmosphereDensityMultiplier", settings.AtmosphereDensityMultiplier.value);
-                _blitMat.SetFloat("_RayleighStrength", settings.RayleighScattering.value);
-                _blitMat.SetColor("_RayleighScatterWeight", settings.RayleighAbsorbsionWeightPerChannel.value);
-                _blitMat.SetColor("_InsColor", settings.InscatteringTint.value);
+                _blitMat.SetColor("_RayleighScatterWeight", settings.AtmosphereAbsorbsionWeightPerChannel.value);
+                _blitMat.SetColor("_InsColor", settings.AtmosphereInscatteringTint.value);
                 _blitMat.SetInt("_NumOpticalDepthSample", settings.OpticalDepthSamples.value);
-                _blitMat.SetInt("_NumInScatteringSample", settings.InScatteringSamples.value);
+                _blitMat.SetInt("_NumInScatteringSample", settings.InscatteringSamples.value);
+
+                _blitMat.SetFloat("_Ms_Thickness", settings.AerosolsHeight.value);
+                _blitMat.SetFloat("_Ms_DensityFalloff", settings.AerosolsDensityFalloff.value);
+                _blitMat.SetFloat("_Ms_Absorbsion", settings.AerosolsUniformAbsorbsion.value);
+                _blitMat.SetFloat("_Ms_DensityMultiplier", settings.AerosolsDensityMultiplier.value);
+                _blitMat.SetFloat("_Ms_Anisotropic", settings.AerosolsAnistropic.value);
+                _blitMat.SetColor("_Ms_InsColor", settings.AerosolsInscatteringTint.value);
+
+
 
                 if (_rtColor != null)
                 {
