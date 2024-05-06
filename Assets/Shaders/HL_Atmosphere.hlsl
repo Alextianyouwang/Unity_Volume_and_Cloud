@@ -2,7 +2,7 @@
 #define ATMOSPHERE_INCLUDE
 uniform float4 _BlitScaleBias;
 sampler2D _CameraOpaqueTexture, _DepthTexture;
-float _ScatterIntensity, _Rs_Thickness, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier;
+float _ScatterIntensity, _Rs_Thickness, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier, _AtmosphereChannelSplit;
 float4 _RayleighScatterWeight, _InsColor;
 float _Camera_Near, _Camera_Far, _EarthRadius;
 int _NumInScatteringSample, _NumOpticalDepthSample;
@@ -125,7 +125,8 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
     float3 samplePos = rayOrigin;
     float rs_phase = PhaseFunction(dot(sunDir, rayDir), 0);
     float ms_phase = PhaseFunction(dot(sunDir, rayDir), _Ms_Anisotropic);
-    float3 rs_scatteringWeight = _RayleighScatterWeight.xyz * _ScatterIntensity;
+    float3 rs_scatteringWeight = lerp(length(_RayleighScatterWeight.xyz) / 3, _RayleighScatterWeight.xyz, _AtmosphereChannelSplit) * _ScatterIntensity;
+    float ms_scatteringWeight = _Ms_Absorbsion / 100;
     float rs_viewRayOpticalDepth = 0;
     float ms_viewRayOpticalDepth = 0;
     float3 rs_inscatterLight = 0;
@@ -143,14 +144,16 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
         float rs_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength, _Rs_Thickness, _NumOpticalDepthSample, _AtmosphereDensityFalloff, _AtmosphereDensityMultiplier);
         float ms_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength, _Ms_Thickness, _NumOpticalDepthSample, _Ms_DensityFalloff, _Ms_DensityMultiplier);
         float3 rs_transmittance = exp(-(rs_sunRayOpticalDepth + rs_viewRayOpticalDepth) * rs_scatteringWeight);
-        float ms_transmittance = exp(-(ms_sunRayOpticalDepth + ms_viewRayOpticalDepth) * _Ms_Absorbsion);
+        float ms_transmittance = exp(-(ms_sunRayOpticalDepth + ms_viewRayOpticalDepth) * ms_scatteringWeight);
        
-        rs_inscatterLight += rs_transmittance * rs_localDensity;
-        ms_inscatterLight += ms_transmittance * ms_localDensity;
+        float3 tau = (rs_sunRayOpticalDepth + rs_viewRayOpticalDepth) * rs_scatteringWeight + (ms_sunRayOpticalDepth + ms_viewRayOpticalDepth) * ms_scatteringWeight;
+        float3 totalTransmittance = exp(-tau);
+        rs_inscatterLight += totalTransmittance * rs_localDensity;
+        ms_inscatterLight += totalTransmittance * ms_localDensity;
         samplePos += rayDir * stepSize;
     }
     rs_inscatterLight *= rs_phase * rs_scatteringWeight * _InsColor.xyz;
-    ms_inscatterLight *= ms_phase * (_Ms_Absorbsion / 3.0) * _Ms_InsColor.xyz;
+    ms_inscatterLight *= ms_phase * ms_scatteringWeight * _Ms_InsColor.xyz;
     transmittance = exp(-rs_viewRayOpticalDepth * rs_scatteringWeight);
     inscatteredLight =   ms_inscatterLight + rs_inscatterLight;
 }

@@ -48,6 +48,7 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
                 _blitMat.SetFloat("_AtmosphereDensityFalloff", settings.AtmosphereDensityFalloff.value);
                 _blitMat.SetFloat("_ScatterIntensity", settings.AtmosphereUniformAbsorbsion.value);
                 _blitMat.SetFloat("_AtmosphereDensityMultiplier", settings.AtmosphereDensityMultiplier.value);
+                _blitMat.SetFloat("_AtmosphereChannelSplit", settings.AtmosphereChannelSplit.value);
                 _blitMat.SetColor("_RayleighScatterWeight", settings.AtmosphereAbsorbsionWeightPerChannel.value);
                 _blitMat.SetColor("_InsColor", settings.AtmosphereInscatteringTint.value);
                 _blitMat.SetInt("_NumOpticalDepthSample", settings.OpticalDepthSamples.value);

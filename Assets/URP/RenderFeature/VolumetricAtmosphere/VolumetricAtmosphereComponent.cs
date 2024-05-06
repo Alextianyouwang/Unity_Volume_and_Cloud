@@ -18,6 +18,8 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     public ColorParameter AtmosphereInscatteringTint = new ColorParameter(Color.white,true,false, true);
     public ClampedFloatParameter AtmosphereUniformAbsorbsion = new ClampedFloatParameter(0.1f, 0f, 1f, false);
     public ColorParameter AtmosphereAbsorbsionWeightPerChannel = new ColorParameter(new Color(0.01f, 0.03f, 0.08f), false,false,true);
+    public ClampedFloatParameter AtmosphereChannelSplit = new ClampedFloatParameter(1, 0f, 1f, false);
+
 
 
     [Header("Mie Scattering")]
