@@ -1,8 +1,9 @@
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-[VolumeComponentMenuForRenderPipeline("Custom/Volumetric Atmosphere", typeof(UniversalRenderPipeline))]
+[Serializable, VolumeComponentMenuForRenderPipeline("Custom/Volumetric Atmosphere", typeof(UniversalRenderPipeline))]
 public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessComponent
 {
     public BoolParameter Enabled = new BoolParameter(false, BoolParameter.DisplayType.Checkbox, true);
@@ -12,6 +13,7 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     public ClampedIntParameter InscatteringSamples = new ClampedIntParameter(30, 1, 30, false);
 
     [Header("Rayleigh Scattering")]
+    public BoolParameter EnableRayleighScattering = new BoolParameter(true, BoolParameter.DisplayType.Checkbox, true);
     public FloatParameter AtmosphereHeight = new FloatParameter(100f, false);
     public ClampedFloatParameter AtmosphereDensityFalloff = new ClampedFloatParameter(1f,1f,10f, false);
     public ClampedFloatParameter AtmosphereDensityMultiplier = new ClampedFloatParameter(1f, 0f, 3f, false);
@@ -23,6 +25,7 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
 
 
     [Header("Mie Scattering")]
+    public BoolParameter EnableMieScattering = new BoolParameter(true, BoolParameter.DisplayType.Checkbox, true);
     public FloatParameter AerosolsHeight = new FloatParameter(20f, false);
     public ClampedFloatParameter AerosolsDensityFalloff = new ClampedFloatParameter(1f, 1f, 10f, false);
     public ClampedFloatParameter AerosolsDensityMultiplier = new ClampedFloatParameter(1f, 0f, 3f, false);
@@ -30,7 +33,8 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     public ClampedFloatParameter AerosolsUniformAbsorbsion = new ClampedFloatParameter(0.1f, 0f, 1f, false);
     public ClampedFloatParameter AerosolsAnistropic = new ClampedFloatParameter(0.7f, 0f, 1f, false);
 
-
+    [Header("Debug")]
+    public BoolParameter VolumePassOnly = new BoolParameter(false, BoolParameter.DisplayType.Checkbox, true);
     public bool IsTileCompatible()
     {
         return true;
@@ -40,4 +44,10 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     {
         return Enabled.value;
     }
+
+    public VolumetricAtmosphereComponent() : base()
+    {
+        displayName = "Volumetric Atmosphere";
+    }
+
 }

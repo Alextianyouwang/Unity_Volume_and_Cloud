@@ -29,31 +29,39 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
     {
         CommandBuffer cmd = CommandBufferPool.Get();
         VolumetricAtmosphereComponent settings = VolumeManager.instance.stack.GetComponent<VolumetricAtmosphereComponent>();
-        if (settings == null)
-            return;
-        if (!settings.IsActive())
-            return;
         using (new ProfilingScope(cmd, _profilingSampler))
         {
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
             if (_blitMat != null)
             {
-                _blitMat.SetTexture("_DepthTexture", renderingData.cameraData.renderer.cameraDepthTargetHandle);
+                _blitMat.SetTexture("_CameraOpaqueTexture", renderingData.cameraData.renderer.cameraColorTargetHandle);
+                _blitMat.SetTexture("_CameraDepthTexture", renderingData.cameraData.renderer.cameraDepthTargetHandle);
                 _blitMat.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
                 _blitMat.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
                 _blitMat.SetFloat("_EarthRadius", settings.EarthRadius.value);
-
-                _blitMat.SetFloat("_Rs_Thickness", settings.AtmosphereHeight.value);
-                _blitMat.SetFloat("_AtmosphereDensityFalloff", settings.AtmosphereDensityFalloff.value);
-                _blitMat.SetFloat("_ScatterIntensity", settings.AtmosphereUniformAbsorbsion.value);
-                _blitMat.SetFloat("_AtmosphereDensityMultiplier", settings.AtmosphereDensityMultiplier.value);
-                _blitMat.SetFloat("_AtmosphereChannelSplit", settings.AtmosphereChannelSplit.value);
-                _blitMat.SetColor("_RayleighScatterWeight", settings.AtmosphereAbsorbsionWeightPerChannel.value);
-                _blitMat.SetColor("_InsColor", settings.AtmosphereInscatteringTint.value);
                 _blitMat.SetInt("_NumOpticalDepthSample", settings.OpticalDepthSamples.value);
                 _blitMat.SetInt("_NumInScatteringSample", settings.InscatteringSamples.value);
 
+                LocalKeyword enableRayleigh = new LocalKeyword(_blitMat.shader, "_USE_RAYLEIGH");
+                if (settings.EnableRayleighScattering.value)
+                    _blitMat.EnableKeyword(enableRayleigh);
+                else
+                    _blitMat.DisableKeyword(enableRayleigh);
+                _blitMat.SetFloat("_Rs_Thickness", settings.AtmosphereHeight.value);
+                _blitMat.SetFloat("_Rs_DensityFalloff", settings.AtmosphereDensityFalloff.value);
+                _blitMat.SetFloat("_Rs_Absorbsion", settings.AtmosphereUniformAbsorbsion.value);
+                _blitMat.SetFloat("_Rs_DensityMultiplier", settings.AtmosphereDensityMultiplier.value);
+                _blitMat.SetFloat("_Rs_ChannelSplit", settings.AtmosphereChannelSplit.value);
+                _blitMat.SetColor("_Rs_ScatterWeight", settings.AtmosphereAbsorbsionWeightPerChannel.value);
+                _blitMat.SetColor("_Rs_InsColor", settings.AtmosphereInscatteringTint.value);
+   
+
+                LocalKeyword enableMie = new LocalKeyword(_blitMat.shader, "_USE_MIE");
+                if (settings.EnableMieScattering.value)
+                    _blitMat.EnableKeyword(enableMie);
+                else
+                    _blitMat.DisableKeyword(enableMie);
                 _blitMat.SetFloat("_Ms_Thickness", settings.AerosolsHeight.value);
                 _blitMat.SetFloat("_Ms_DensityFalloff", settings.AerosolsDensityFalloff.value);
                 _blitMat.SetFloat("_Ms_Absorbsion", settings.AerosolsUniformAbsorbsion.value);
@@ -61,14 +69,10 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
                 _blitMat.SetFloat("_Ms_Anisotropic", settings.AerosolsAnistropic.value);
                 _blitMat.SetColor("_Ms_InsColor", settings.AerosolsInscatteringTint.value);
 
+                _blitMat.SetInt("_VolumeOnly", settings.VolumePassOnly.value?1:0);
 
-
-                if (_rtColor != null)
-                {
-                    Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor, _blitMat, 0);
-                    Blitter.BlitCameraTexture(cmd, _rtTempColor, _rtColor);
-
-                }
+                Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor, _blitMat, 0);
+                Blitter.BlitCameraTexture(cmd, _rtTempColor, _rtColor);
             }
         }
         context.ExecuteCommandBuffer(cmd);

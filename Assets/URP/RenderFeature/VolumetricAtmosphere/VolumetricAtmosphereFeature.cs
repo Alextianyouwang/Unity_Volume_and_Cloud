@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-
 public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 {
     public bool showInSceneView = true;
@@ -21,18 +20,23 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        CameraType cameraType = renderingData.cameraData.cameraType;
-        if (cameraType == CameraType.Preview) return; 
-        if (!showInSceneView && cameraType == CameraType.SceneView) return;
+        if (!ReadyToEnqueue(renderingData)) return;
         renderer.EnqueuePass(_volumePass);
     }
     public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
     {
-        CameraType cameraType = renderingData.cameraData.cameraType;
-        if (cameraType == CameraType.Preview) return;
-        if (!showInSceneView && cameraType == CameraType.SceneView) return;
-        _volumePass.ConfigureInput(ScriptableRenderPassInput.Color);
+        if (!ReadyToEnqueue(renderingData)) return;
         _volumePass.SetTarget(renderer.cameraColorTargetHandle);
+    }
+    bool ReadyToEnqueue(RenderingData renderingData) 
+    {
+        CameraType cameraType = renderingData.cameraData.cameraType;
+        if (cameraType == CameraType.Preview) return false;
+        if (!showInSceneView && cameraType == CameraType.SceneView) return false;
+        VolumetricAtmosphereComponent settings = VolumeManager.instance.stack.GetComponent<VolumetricAtmosphereComponent>();
+        if (settings == null) return false;
+        if (!settings.IsActive()) return false;
+        return true;
     }
     protected override void Dispose(bool disposing)
     {
