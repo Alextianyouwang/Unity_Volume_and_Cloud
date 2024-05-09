@@ -9,8 +9,8 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     public BoolParameter Enabled = new BoolParameter(false, BoolParameter.DisplayType.Checkbox, true);
     [Header("Configuration")]
     public FloatParameter EarthRadius = new FloatParameter(5000f, false);
-    public ClampedIntParameter OpticalDepthSamples = new ClampedIntParameter(10, 1, 30, false);
-    public ClampedIntParameter InscatteringSamples = new ClampedIntParameter(30, 1, 30, false);
+    public ClampedIntParameter OpticalDepthSamples = new ClampedIntParameter(50, 1, 100, false);
+    public ClampedIntParameter InscatteringSamples = new ClampedIntParameter(30, 1, 50, false);
 
     [Header("Rayleigh Scattering")]
     public BoolParameter EnableRayleighScattering = new BoolParameter(true, BoolParameter.DisplayType.Checkbox, true);
@@ -35,6 +35,7 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
 
     [Header("Debug")]
     public BoolParameter VolumePassOnly = new BoolParameter(false, BoolParameter.DisplayType.Checkbox, true);
+
     public bool IsTileCompatible()
     {
         return true;
@@ -49,5 +50,6 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     {
         displayName = "Volumetric Atmosphere";
     }
+
 
 }

@@ -47,6 +47,79 @@ MonoBehaviour:
   dirtIntensity:
     m_OverrideState: 0
     m_Value: 0
+--- !u!114 &-4431855856292198278
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 859ab6eb70963d147b95c5aac902cd1e, type: 3}
+  m_Name: VolumetricAtmosphereComponent
+  m_EditorClassIdentifier: 
+  active: 1
+  Enabled:
+    m_OverrideState: 1
+    m_Value: 1
+  EarthRadius:
+    m_OverrideState: 0
+    m_Value: 5000
+  OpticalDepthSamples:
+    m_OverrideState: 0
+    m_Value: 50
+  InscatteringSamples:
+    m_OverrideState: 0
+    m_Value: 30
+  EnableRayleighScattering:
+    m_OverrideState: 1
+    m_Value: 1
+  AtmosphereHeight:
+    m_OverrideState: 0
+    m_Value: 100
+  AtmosphereDensityFalloff:
+    m_OverrideState: 0
+    m_Value: 1
+  AtmosphereDensityMultiplier:
+    m_OverrideState: 0
+    m_Value: 1
+  AtmosphereInscatteringTint:
+    m_OverrideState: 0
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+  AtmosphereUniformAbsorbsion:
+    m_OverrideState: 0
+    m_Value: 0.1
+  AtmosphereAbsorbsionWeightPerChannel:
+    m_OverrideState: 0
+    m_Value: {r: 0.01, g: 0.03, b: 0.08, a: 1}
+  AtmosphereChannelSplit:
+    m_OverrideState: 0
+    m_Value: 1
+  EnableMieScattering:
+    m_OverrideState: 1
+    m_Value: 1
+  AerosolsHeight:
+    m_OverrideState: 0
+    m_Value: 20
+  AerosolsDensityFalloff:
+    m_OverrideState: 0
+    m_Value: 1
+  AerosolsDensityMultiplier:
+    m_OverrideState: 0
+    m_Value: 1
+  AerosolsInscatteringTint:
+    m_OverrideState: 0
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+  AerosolsUniformAbsorbsion:
+    m_OverrideState: 0
+    m_Value: 0.1
+  AerosolsAnistropic:
+    m_OverrideState: 0
+    m_Value: 0.7
+  VolumePassOnly:
+    m_OverrideState: 1
+    m_Value: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -62,7 +135,7 @@ MonoBehaviour:
   components:
   - {fileID: 4122951676378206706}
   - {fileID: -8592638148125547760}
-  - {fileID: 4925391370638344045}
+  - {fileID: -4431855856292198278}
 --- !u!114 &4122951676378206706
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -103,76 +176,3 @@ MonoBehaviour:
   maxNits:
     m_OverrideState: 0
     m_Value: 1000
---- !u!114 &4925391370638344045
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 859ab6eb70963d147b95c5aac902cd1e, type: 3}
-  m_Name: VolumetricAtmosphereComponent
-  m_EditorClassIdentifier: 
-  active: 1
-  Enabled:
-    m_OverrideState: 1
-    m_Value: 1
-  EarthRadius:
-    m_OverrideState: 1
-    m_Value: 5000
-  OpticalDepthSamples:
-    m_OverrideState: 1
-    m_Value: 30
-  InscatteringSamples:
-    m_OverrideState: 1
-    m_Value: 30
-  EnableRayleighScattering:
-    m_OverrideState: 1
-    m_Value: 1
-  AtmosphereHeight:
-    m_OverrideState: 1
-    m_Value: 100
-  AtmosphereDensityFalloff:
-    m_OverrideState: 1
-    m_Value: 1
-  AtmosphereDensityMultiplier:
-    m_OverrideState: 1
-    m_Value: 1
-  AtmosphereInscatteringTint:
-    m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
-  AtmosphereUniformAbsorbsion:
-    m_OverrideState: 1
-    m_Value: 0.1
-  AtmosphereAbsorbsionWeightPerChannel:
-    m_OverrideState: 1
-    m_Value: {r: 0.01, g: 0.03, b: 0.08, a: 1}
-  AtmosphereChannelSplit:
-    m_OverrideState: 1
-    m_Value: 1
-  EnableMieScattering:
-    m_OverrideState: 1
-    m_Value: 0
-  AerosolsHeight:
-    m_OverrideState: 1
-    m_Value: 20
-  AerosolsDensityFalloff:
-    m_OverrideState: 1
-    m_Value: 1
-  AerosolsDensityMultiplier:
-    m_OverrideState: 1
-    m_Value: 1
-  AerosolsInscatteringTint:
-    m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
-  AerosolsUniformAbsorbsion:
-    m_OverrideState: 1
-    m_Value: 0.1
-  AerosolsAnistropic:
-    m_OverrideState: 1
-    m_Value: 0.7
-  VolumePassOnly:
-    m_OverrideState: 1
-    m_Value: 0

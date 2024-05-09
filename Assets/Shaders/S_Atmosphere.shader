@@ -22,6 +22,7 @@ Shader "Hidden/S_Atmosphere"
 
 #pragma shader_feature_local _ _USE_MIE
 #pragma shader_feature_local _ _USE_RAYLEIGH
+#pragma shader_feature_local _ _USE_REALTIME
 
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"

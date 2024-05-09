@@ -12,38 +12,46 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 
 
     private ComputeShader _baker;
-    private RenderTexture _rt;
-    public int Resolusion = 512;
-    public float EarthRadius = 5000;
-
-    public float AtmosphereHeight = 100;
-    public float AtmosphereDensityFalloff = 1.0f;
-
-    public float AerosolsHeight = 20;
-    public float AerosolsDensityFalloff = 1.0f;
+    private RenderTexture _opticalDepthTex;
+    public enum PrebakedTextureQuality {Low128,Medium256,High512,Ultra1024,Realtime}
+    public PrebakedTextureQuality PrebakedTextureQualitySetting = PrebakedTextureQuality.High512;
+    private int resolusion = 512;
     public override void Create()
     {
         if (_blitMat == null) 
             _blitMat = CoreUtils.CreateEngineMaterial(Shader.Find("Hidden/S_Atmosphere"));
 
-        _volumePass = new VolumetricAtmospherePass( name, _blitMat);
-        _volumePass.renderPassEvent = _event;
+        switch (PrebakedTextureQualitySetting) 
+        {
+            case PrebakedTextureQuality.Low128:
+                resolusion = 128;
+                break;
+            case PrebakedTextureQuality.Medium256:
+                resolusion = 256;
+                break;
+            case PrebakedTextureQuality.High512:
+                resolusion = 512;
+                break;
+            case PrebakedTextureQuality.Ultra1024:
+                resolusion = 1024;
+                break;
+            case PrebakedTextureQuality.Realtime:
+                resolusion = 1;
+                break;
+            default:
+                resolusion = 512;
+                break;
+        }
+            _opticalDepthTex = new RenderTexture(resolusion, resolusion, 0, RenderTextureFormat.ARGB64, 0);
+            _opticalDepthTex.filterMode = FilterMode.Point;
+            _opticalDepthTex.enableRandomWrite = true;
+            _opticalDepthTex.format = RenderTextureFormat.ARGBFloat;
 
-        _rt = new RenderTexture(Resolusion, Resolusion, 0, RenderTextureFormat.ARGB64, 0);
-        _rt.filterMode = FilterMode.Point;
-        _rt.enableRandomWrite = true;
-        _rt.format = RenderTextureFormat.ARGBFloat;
         
         _baker = (ComputeShader)Resources.Load("CS_VA_LookuptableBaker");
-        _baker.SetTexture(0, "_LookupRT", _rt);
-        _baker.SetInt("_Resolusion", Resolusion);
-        _baker.SetInt("_NumOpticalDepthSample", 50);
-        _baker.SetFloat("_RS_Thickness", AtmosphereHeight);
-        _baker.SetFloat("_RS_Falloff", AtmosphereDensityFalloff);
-        _baker.SetFloat("_MS_Thickness", AerosolsHeight);
-        _baker.SetFloat("_MS_Falloff", AerosolsDensityFalloff);
-        _baker.SetFloat("_EarthRadius", EarthRadius);
-        _baker.Dispatch(0, Mathf.CeilToInt(Resolusion / 8), Mathf.CeilToInt(Resolusion / 8), 1);
+
+        _volumePass = new VolumetricAtmospherePass(name);
+        _volumePass.renderPassEvent = _event;
 
     }
 
@@ -51,29 +59,28 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
     {
         if (!ReadyToEnqueue(renderingData)) return;
         renderer.EnqueuePass(_volumePass);
-
-
     }
     public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
     {
         if (!ReadyToEnqueue(renderingData)) return;
-        _volumePass.SetTarget(renderer.cameraColorTargetHandle,_rt);
+        _volumePass.SetData(renderer.cameraColorTargetHandle,_baker, _opticalDepthTex,_blitMat,PrebakedTextureQualitySetting == PrebakedTextureQuality.Realtime);
     }
     bool ReadyToEnqueue(RenderingData renderingData) 
     {
         CameraType cameraType = renderingData.cameraData.cameraType;
         if (cameraType == CameraType.Preview) return false;
         if (!showInSceneView && cameraType == CameraType.SceneView) return false;
-        VolumetricAtmosphereComponent settings = VolumeManager.instance.stack.GetComponent<VolumetricAtmosphereComponent>();
-        if (settings == null) return false;
-        if (!settings.IsActive()) return false;
+        if (!_baker) return false;
+        if (!_blitMat) return false;
         return true;
     }
     protected override void Dispose(bool disposing)
     {
-        _rt.Release();
         _volumePass.Dispose();
-        if (!Application.isPlaying)
+        if (!Application.isPlaying) 
+        {
             CoreUtils.Destroy(_blitMat);
+            _opticalDepthTex.Release();
+        }
     }
 }

@@ -15,11 +15,7 @@ MonoBehaviour:
   m_Active: 1
   showInSceneView: 1
   _event: 500
-  Resolusion: 512
-  Height: 100
-  EarthRadius: 5000
-  Falloff: 1
-  Multiplier: 1
+  PrebakedTextureQualitySetting: 3
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
