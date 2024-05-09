@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b2db86121404754db890f4c8dfe81b2, type: 3}
   m_Name: Bloom
   m_EditorClassIdentifier: 
-  active: 0
+  active: 1
   skipIterations:
     m_OverrideState: 0
     m_Value: 1
@@ -64,58 +64,58 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 1
   EarthRadius:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 5000
   OpticalDepthSamples:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 50
   InscatteringSamples:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 30
   EnableRayleighScattering:
     m_OverrideState: 1
     m_Value: 1
   AtmosphereHeight:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 100
   AtmosphereDensityFalloff:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   AtmosphereDensityMultiplier:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   AtmosphereInscatteringTint:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   AtmosphereUniformAbsorbsion:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.1
   AtmosphereAbsorbsionWeightPerChannel:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {r: 0.01, g: 0.03, b: 0.08, a: 1}
   AtmosphereChannelSplit:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   EnableMieScattering:
     m_OverrideState: 1
     m_Value: 1
   AerosolsHeight:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 20
   AerosolsDensityFalloff:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   AerosolsDensityMultiplier:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 1
   AerosolsInscatteringTint:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   AerosolsUniformAbsorbsion:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.1
   AerosolsAnistropic:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: 0.7
   VolumePassOnly:
     m_OverrideState: 1
