@@ -7,15 +7,17 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
     private ProfilingSampler _profilingSampler;
     private RTHandle _rtColor, _rtTempColor;
     private Material _blitMat;
+    private RenderTexture _opticDepthTex;
 
     public VolumetricAtmospherePass(string name, Material mat)
     {
         _profilingSampler = new ProfilingSampler(name);
         _blitMat = mat;
     }
-    public void SetTarget(RTHandle colorHandle)
+    public void SetTarget(RTHandle colorHandle, RenderTexture opticDepthTex)
     {
         _rtColor = colorHandle;
+        _opticDepthTex = opticDepthTex;
     }
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
     {
@@ -37,6 +39,7 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
             {
                 _blitMat.SetTexture("_CameraOpaqueTexture", renderingData.cameraData.renderer.cameraColorTargetHandle);
                 _blitMat.SetTexture("_CameraDepthTexture", renderingData.cameraData.renderer.cameraDepthTargetHandle);
+                _blitMat.SetTexture("_OpticalDepthTexture", _opticDepthTex);
                 _blitMat.SetFloat("_Camera_Near", renderingData.cameraData.camera.nearClipPlane);
                 _blitMat.SetFloat("_Camera_Far", renderingData.cameraData.camera.farClipPlane);
                 _blitMat.SetFloat("_EarthRadius", settings.EarthRadius.value);
@@ -70,7 +73,6 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
                 _blitMat.SetColor("_Ms_InsColor", settings.AerosolsInscatteringTint.value);
 
                 _blitMat.SetInt("_VolumeOnly", settings.VolumePassOnly.value?1:0);
-
                 Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor, _blitMat, 0);
                 Blitter.BlitCameraTexture(cmd, _rtTempColor, _rtColor);
             }

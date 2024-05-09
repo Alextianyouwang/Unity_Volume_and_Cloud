@@ -1,0 +1,77 @@
+
+#pragma kernel CSMain
+RWTexture2D<float4> _LookupRT;
+
+float _EarthRadius;
+uint _NumOpticalDepthSample;
+uint _Resolusion;
+float _RS_Thickness, _RS_Falloff,_MS_Thickness,_MS_Falloff;
+
+float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, float3 rayDir)
+{
+    float3 offset = rayOrigin - sphereCentre;
+    float a = 1; // Set to dot(rayDir, rayDir) if rayDir might not be normalized
+    float b = 2 * dot(offset, rayDir);
+    float c = dot(offset, offset) - sphereRadius * sphereRadius;
+    float d = b * b - 4 * a * c; // Discriminant from quadratic formula
+
+		// Number of intersections: 0 when d < 0; 1 when d = 0; 2 when d > 0
+    if (d > 0)
+    {
+        float s = sqrt(d);
+        float dstToSphereNear = max(0, (-b - s) / (2 * a));
+        float dstToSphereFar = (-b + s) / (2 * a);
+
+			// Ignore intersections that occur behind the ray
+        if (dstToSphereFar >= 0)
+        {
+            return float2(dstToSphereNear, dstToSphereFar - dstToSphereNear);
+        }
+    }
+		// Ray did not intersect sphere
+    return float2(10000, 0);
+}
+float LocalDensity(float3 pos, float relativeHeight, float falloff)
+{
+    float distToCenter = length(pos);
+    float heightAboveSurface = max(distToCenter - _EarthRadius, 0);
+    float height01 = clamp(heightAboveSurface / relativeHeight, 0, 1);
+    return exp(-height01 * falloff) * (1 - height01);
+
+}
+float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength, float relativeHeight, float falloff)
+{
+    float3 densitySamplePoint = rayOrigin;
+    float stepSize = rayLength / (_NumOpticalDepthSample - 1);
+    float opticalDepth = 0;
+
+    for (uint i = 0; i < _NumOpticalDepthSample; i++)
+    {
+        float localDensity = LocalDensity(densitySamplePoint, relativeHeight, falloff);
+        opticalDepth += localDensity * stepSize;
+        densitySamplePoint += rayDir * stepSize;
+    }
+    return opticalDepth;
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _Resolusion || id.y >= _Resolusion)
+        return;
+    float2 uv = id.xy / (float) _Resolusion;
+    uv.x = -uv.x * 2 + 1;
+    float angle = acos(uv.x);
+    float2 dir = float2(sin(angle) ,cos(angle));
+    uv.y *= _RS_Thickness;
+    
+    float3 rayOrigin = float3(dir, 0) * (uv.y+ _EarthRadius);
+    float distThroughSphere = RaySphere(0, _EarthRadius + _RS_Thickness, rayOrigin, float3(0, 1, 0)).y;
+    float rs_opticalDepth = OpticalDepth(rayOrigin, float3(0, 1, 0), distThroughSphere, _RS_Thickness, _RS_Falloff);
+    float rs_localDensity = LocalDensity(rayOrigin, _RS_Thickness, _RS_Falloff);
+    float ms_opticalDepth = OpticalDepth(rayOrigin, float3(0, 1, 0), distThroughSphere, _MS_Thickness, _MS_Falloff);
+    float ms_localDensity = LocalDensity(rayOrigin, _MS_Thickness, _MS_Falloff);
+    
+    _LookupRT[id.xy] = float4(rs_opticalDepth, rs_localDensity, ms_opticalDepth, ms_localDensity);
+
+}

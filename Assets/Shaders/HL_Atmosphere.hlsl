@@ -1,7 +1,7 @@
 #ifndef ATMOSPHERE_INCLUDE
 #define ATMOSPHERE_INCLUDE
 uniform float4 _BlitScaleBias;
-sampler2D _CameraOpaqueTexture, _CameraDepthTexture;
+sampler2D _CameraOpaqueTexture, _CameraDepthTexture,_OpticalDepthTexture;
 float _Camera_Near, _Camera_Far, _EarthRadius;
 int _NumInScatteringSample, _NumOpticalDepthSample;
 
@@ -116,6 +116,16 @@ float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength, float relat
     return opticalDepth;
 }
 
+float4 OpticalDepthBaked(float3 rayOrigin, float3 rayDir)
+{
+    float3 relativeDistToCenter = rayOrigin - float3(0, -_EarthRadius, 0);
+    float distAboveGround = length(relativeDistToCenter) - _EarthRadius;
+    float height01 = distAboveGround / _Rs_Thickness;
+    float zenithAngle = dot(normalize(relativeDistToCenter), rayDir);
+    float angle01 = 1 - (zenithAngle * 0.5 + 0.5);
+    float4 opticalDepth = tex2D(_OpticalDepthTexture, float2(angle01,height01));
+    return opticalDepth;
+}
 
 
 
@@ -143,20 +153,24 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
     for (int i = 0; i < _NumInScatteringSample; i++)
     {
         float sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Rs_Thickness, samplePos, sunDir).y;
-        
+        float4 opticalDepthData = OpticalDepthBaked(samplePos, sunDir);
 #if _USE_RAYLEIGH
         float rs_localDensity = LocalDensity(samplePos, _Rs_Thickness, _Rs_DensityFalloff, _Rs_DensityMultiplier) * stepSize;
+        rs_localDensity = opticalDepthData.y* stepSize* _Rs_DensityMultiplier;
         rs_viewRayOpticalDepth += rs_localDensity;
         float rs_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength, _Rs_Thickness,_Rs_DensityFalloff, _Rs_DensityMultiplier);
-        float3 rs_tau = (rs_sunRayOpticalDepth + rs_viewRayOpticalDepth) * rs_scatteringWeight;
+        rs_sunRayOpticalDepth = opticalDepthData.x;
+        float3 rs_tau = (rs_viewRayOpticalDepth + rs_sunRayOpticalDepth) * rs_scatteringWeight;
 #else
         float3 rs_tau = 0;
         float rs_localDensity = 0;
 #endif
 #if _USE_MIE
         float ms_localDensity = LocalDensity(samplePos, _Ms_Thickness, _Ms_DensityFalloff, _Ms_DensityMultiplier) * stepSize;
+        ms_localDensity = opticalDepthData.w * stepSize * _Ms_DensityMultiplier;
         ms_viewRayOpticalDepth += ms_localDensity;
         float ms_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength, _Ms_Thickness, _Ms_DensityFalloff, _Ms_DensityMultiplier);
+        ms_sunRayOpticalDepth =  opticalDepthData.z;
         float3 ms_tau = (ms_sunRayOpticalDepth + ms_viewRayOpticalDepth) * ms_scatteringWeight;
 #else
         float3 ms_tau = 0;
@@ -169,7 +183,7 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
         ms_inscatterLight += totalTransmittance * ms_localDensity;
         samplePos += rayDir * stepSize;
     }
-    rs_inscatterLight *= rs_phase * rs_scatteringWeight * _Rs_InsColor.xyz;
+    rs_inscatterLight *=  rs_scatteringWeight * _Rs_InsColor.xyz;
     ms_inscatterLight *= ms_phase * ms_scatteringWeight * _Ms_InsColor.xyz;
     transmittance = exp(-rs_viewRayOpticalDepth * rs_scatteringWeight - ms_viewRayOpticalDepth * ms_scatteringWeight);
     inscatteredLight =   ms_inscatterLight + rs_inscatterLight;
@@ -179,8 +193,10 @@ float4 frag(v2f i) : SV_Target
 {
     float3 rayOrigin = _WorldSpaceCameraPos;
     float3 rayDir = normalize(i.viewDir); 
+    float4 opticalDepth = tex2D(_OpticalDepthTexture, i.uv);
     
     float4 col = tex2D(_CameraOpaqueTexture, i.uv);
+
     float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
     float sceneDepthNonLinear = tex2D(_CameraDepthTexture, i.uv);
     float sceneDepth = LinearEyeDepth(sceneDepthNonLinear) /dot(rayDir, forward);
@@ -195,6 +211,9 @@ float4 frag(v2f i) : SV_Target
     AtmosphereicScattering(marchStart, rayDir, mainLight.direction, distThroughVolume, inscatteredLight,transmittance);
 
     float3 finalCol = _VolumeOnly ? inscatteredLight : inscatteredLight + transmittance * col.xyz;
+    
+   //return opticalDepth ;
+    
     return finalCol.xyzz;
 }
 #endif

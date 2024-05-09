@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b2db86121404754db890f4c8dfe81b2, type: 3}
   m_Name: Bloom
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   skipIterations:
     m_OverrideState: 0
     m_Value: 1
@@ -124,7 +124,7 @@ MonoBehaviour:
     m_Value: 5000
   OpticalDepthSamples:
     m_OverrideState: 1
-    m_Value: 10
+    m_Value: 30
   InscatteringSamples:
     m_OverrideState: 1
     m_Value: 30
@@ -154,7 +154,7 @@ MonoBehaviour:
     m_Value: 1
   EnableMieScattering:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
   AerosolsHeight:
     m_OverrideState: 1
     m_Value: 20
