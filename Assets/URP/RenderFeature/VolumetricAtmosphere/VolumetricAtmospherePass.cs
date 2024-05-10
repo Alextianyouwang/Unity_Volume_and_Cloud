@@ -124,7 +124,8 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
     {
         if (_baker == null)
             return;
-
+        if (_opticDepthTex_external == null)
+            return;
         int res = _opticDepthTex_external.width;
         if (res <= 8)
             return;

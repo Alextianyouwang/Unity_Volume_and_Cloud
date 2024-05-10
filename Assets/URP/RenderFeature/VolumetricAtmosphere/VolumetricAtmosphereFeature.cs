@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-
 public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 {
     public bool showInSceneView = true;
@@ -9,7 +8,6 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 
     private VolumetricAtmospherePass _volumePass;
     private Material _blitMat;
-
 
     private ComputeShader _baker;
     private RenderTexture _opticalDepthTex;
@@ -20,8 +18,15 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
     {
         if (_blitMat == null) 
             _blitMat = CoreUtils.CreateEngineMaterial(Shader.Find("Hidden/S_Atmosphere"));
-
-        switch (PrebakedTextureQualitySetting) 
+        _baker = (ComputeShader)Resources.Load("CS_VA_LookuptableBaker");
+        CreateRenderRT();
+        _volumePass = new VolumetricAtmospherePass(name);
+        _volumePass.renderPassEvent = _event;
+    }
+  
+    private void CreateRenderRT() 
+    {
+        switch (PrebakedTextureQualitySetting)
         {
             case PrebakedTextureQuality.Low128:
                 resolusion = 128;
@@ -42,23 +47,18 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
                 resolusion = 512;
                 break;
         }
-            _opticalDepthTex = new RenderTexture(resolusion, resolusion, 0, RenderTextureFormat.ARGB64, 0);
-            _opticalDepthTex.filterMode = FilterMode.Point;
-            _opticalDepthTex.enableRandomWrite = true;
-            _opticalDepthTex.format = RenderTextureFormat.ARGBFloat;
-
-        
-        _baker = (ComputeShader)Resources.Load("CS_VA_LookuptableBaker");
-
-        _volumePass = new VolumetricAtmospherePass(name);
-        _volumePass.renderPassEvent = _event;
+        _opticalDepthTex = new RenderTexture(resolusion, resolusion, 0, RenderTextureFormat.ARGB64, 0);
+        _opticalDepthTex.filterMode = FilterMode.Point;
+        _opticalDepthTex.enableRandomWrite = true;
+        _opticalDepthTex.format = RenderTextureFormat.ARGBFloat;
 
     }
-
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         if (!ReadyToEnqueue(renderingData)) return;
         renderer.EnqueuePass(_volumePass);
+
+      
     }
     public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
     {
@@ -80,7 +80,8 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
         if (!Application.isPlaying) 
         {
             CoreUtils.Destroy(_blitMat);
-            _opticalDepthTex.Release();
+            if (_opticalDepthTex != null)
+                _opticalDepthTex.Release();
         }
     }
 }
