@@ -5,7 +5,7 @@ float _EarthRadius;
 uint _NumOpticalDepthSample;
 uint _Resolusion;
 float _RS_Thickness, _RS_DensityFalloff,_MS_Thickness,_MS_DensityFalloff;
-#include "../INCLUDE/HL_AtmosphereHelper.hlsl"
+#include "../../INCLUDE/HL_AtmosphereHelper.hlsl"
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)

@@ -18,7 +18,7 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
     {
         if (_blitMat == null) 
             _blitMat = CoreUtils.CreateEngineMaterial(Shader.Find("Hidden/S_Atmosphere"));
-        _baker = (ComputeShader)Resources.Load("CS_VA_LookuptableBaker");
+        _baker = (ComputeShader)Resources.Load("CS/CS_VA_LookuptableBaker");
         CreateRenderRT();
         _volumePass = new VolumetricAtmospherePass(name);
         _volumePass.renderPassEvent = _event;
