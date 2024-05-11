@@ -3,7 +3,7 @@
 uniform float4 _BlitScaleBias;
 sampler2D _CameraOpaqueTexture, _CameraDepthTexture,_OpticalDepthTexture;
 float _Camera_Near, _Camera_Far, _EarthRadius;
-int _NumInScatteringSample, _NumOpticalDepthSample;
+uint _NumInScatteringSample, _NumOpticalDepthSample;
 
 float _Rs_Absorbsion, _Rs_Thickness, _Rs_DensityFalloff, _Rs_DensityMultiplier, _Rs_ChannelSplit;
 float4 _Rs_ScatterWeight, _Rs_InsColor;
@@ -45,8 +45,8 @@ v2f vert(appdata input)
 
     output.positionCS = pos;
     output.uv = uv;
-    float3 viewVector = mul(unity_CameraInvProjection, float4(uv.xy * 2 - 1, 0, -1));
-    output.viewDir = mul(unity_CameraToWorld, float4(viewVector, 0));
+    float3 viewVector = mul(unity_CameraInvProjection, float4(uv.xy * 2 - 1, 0, -1)).xyz;
+    output.viewDir = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
     return output;
 }
 inline float LinearEyeDepth(float depth)
@@ -92,7 +92,7 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
     float ms_viewRayOpticalDepth = 0;
     float3 rs_inscatterLight = 0;
     float3 ms_inscatterLight = 0;
-    for (int i = 0; i < _NumInScatteringSample; i++)
+    for (uint i = 0; i < _NumInScatteringSample; i++)
     {
 #if _USE_REALTIME
          float3 earthCenter = float3(0, -_EarthRadius, 0);
@@ -149,7 +149,7 @@ float4 frag(v2f i) : SV_Target
     float4 col = tex2D(_CameraOpaqueTexture, i.uv);
 
     float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
-    float sceneDepthNonLinear = tex2D(_CameraDepthTexture, i.uv);
+    float sceneDepthNonLinear = tex2D(_CameraDepthTexture, i.uv).x;
     float sceneDepth = LinearEyeDepth(sceneDepthNonLinear) /dot(rayDir, forward);
 
     Light mainLight = GetMainLight();
