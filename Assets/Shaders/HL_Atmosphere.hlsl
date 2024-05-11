@@ -136,7 +136,7 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
         ms_inscatterLight += totalTransmittance * ms_localDensity;
         samplePos += rayDir * stepSize;
     }
-    rs_inscatterLight *=  rs_scatteringWeight * _Rs_InsColor.xyz;
+    rs_inscatterLight *= rs_phase *  rs_scatteringWeight * _Rs_InsColor.xyz;
     ms_inscatterLight *= ms_phase * ms_scatteringWeight * _Ms_InsColor.xyz;
     transmittance = exp(-rs_viewRayOpticalDepth * rs_scatteringWeight - ms_viewRayOpticalDepth * ms_scatteringWeight);
     inscatteredLight = ms_inscatterLight + rs_inscatterLight;
