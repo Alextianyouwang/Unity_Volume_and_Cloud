@@ -46,6 +46,9 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
 
+            _blitMat.SetVector("_SphereMaskCenter", new Vector4(0, 0, 0, 0));
+            _blitMat.SetFloat("_SphereMaskRadius", 100);
+
             LocalKeyword enableRealtime = new LocalKeyword(_blitMat.shader, "_USE_REALTIME");
             if (_realtime)
                 _blitMat.EnableKeyword(enableRealtime);

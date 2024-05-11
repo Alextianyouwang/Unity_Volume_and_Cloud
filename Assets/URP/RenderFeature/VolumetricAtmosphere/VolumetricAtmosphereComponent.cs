@@ -10,7 +10,7 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     [Header("Configuration")]
     public FloatParameter EarthRadius = new FloatParameter(5000f, false);
     public ClampedIntParameter OpticalDepthSamples = new ClampedIntParameter(50, 1, 100, false);
-    public ClampedIntParameter InscatteringSamples = new ClampedIntParameter(30, 1, 50, false);
+    public ClampedIntParameter InscatteringSamples = new ClampedIntParameter(30, 1, 100, false);
 
     [Header("Rayleigh Scattering")]
     public BoolParameter EnableRayleighScattering = new BoolParameter(true, BoolParameter.DisplayType.Checkbox, true);

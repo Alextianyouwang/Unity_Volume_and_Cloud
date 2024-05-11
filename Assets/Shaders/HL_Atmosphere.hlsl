@@ -94,6 +94,7 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
     float3 ms_inscatterLight = 0;
     for (uint i = 0; i < _NumInScatteringSample; i++)
     {
+        float mask = SphereMask(samplePos);
 #if _USE_REALTIME
          float3 earthCenter = float3(0, -_EarthRadius, 0);
         float sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Rs_Thickness, samplePos, sunDir).y;
@@ -106,7 +107,7 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
         float rs_localDensity = LocalDensity(samplePos,earthCenter, _Rs_Thickness, _Rs_DensityFalloff) *stepSize * _Rs_DensityMultiplier;
         float rs_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength,earthCenter , _Rs_Thickness,_Rs_DensityFalloff) * _Rs_DensityMultiplier;
     #else
-        float rs_localDensity = opticalDepthData.y * stepSize* _Rs_DensityMultiplier;
+        float rs_localDensity = opticalDepthData.y * stepSize* _Rs_DensityMultiplier ;
         float rs_sunRayOpticalDepth = opticalDepthData.x* _Rs_DensityMultiplier;
     #endif
         rs_viewRayOpticalDepth += rs_localDensity;
@@ -132,12 +133,12 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
         
         float3 totalTransmittance = exp(-rs_tau - ms_tau);
         
-        rs_inscatterLight += totalTransmittance * rs_localDensity;
-        ms_inscatterLight += totalTransmittance * ms_localDensity;
+        rs_inscatterLight += totalTransmittance * rs_localDensity * _Rs_InsColor.xyz * mask;
+        ms_inscatterLight += totalTransmittance * ms_localDensity * _Ms_InsColor.xyz * mask;
         samplePos += rayDir * stepSize;
     }
-    rs_inscatterLight *= rs_phase *  rs_scatteringWeight * _Rs_InsColor.xyz;
-    ms_inscatterLight *= ms_phase * ms_scatteringWeight * _Ms_InsColor.xyz;
+    rs_inscatterLight *= rs_phase *  rs_scatteringWeight ;
+    ms_inscatterLight *= ms_phase * ms_scatteringWeight ;
     transmittance = exp(-rs_viewRayOpticalDepth * rs_scatteringWeight - ms_viewRayOpticalDepth * ms_scatteringWeight);
     inscatteredLight = ms_inscatterLight + rs_inscatterLight;
 }
