@@ -56,13 +56,11 @@ inline float LinearEyeDepth(float depth)
     return 1.0 / (z * depth + w);
 }
 
-void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance, inout float2 uv)
+void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance,inout float2 uv)
 {
     float stepSize = distance / (_NumInScatteringSample - 1);
     float3 samplePos = rayOrigin;
     float3 totalDir = 0;
-    float dist = 0;
-    int sampleCount = 0;
     float fraction = 1 / (float) _NumInScatteringSample;
     for (uint i = 0; i < _NumInScatteringSample; i++)
     {
@@ -70,30 +68,22 @@ void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance, inout 
         float prevRing = 0;
         float mask = SphereMask(_SphereMaskCenter, _SphereMaskRadius - 5, 5, samplePos, ring);
         float3 dirToCenter = normalize(prevRing > ring ? samplePos - _SphereMaskCenter : _SphereMaskCenter - samplePos);
-        totalDir += dirToCenter * stepSize * ring * fraction ;
-        sampleCount += 1;
-        dist += stepSize;
-
-        samplePos = rayOrigin + dist * rayDir;
+        totalDir += dirToCenter * stepSize * ring * fraction;
+        samplePos += rayDir * stepSize;
         prevRing = ring;
     }
 
     float3 dirVS = mul(UNITY_MATRIX_V, float4(totalDir, 0)).xyz;
-    //rayDir += totalDir;
-   // uv = mul(unity_CameraProjection,mul(UNITY_MATRIX_V, float4(rayDir, 0))).xy/2 + 0.5;
-    
     uv += dirVS.xy * -0.5;
-
 }
 
 float4 frag(v2f i) : SV_Target
 {
     float3 rayOrigin = _WorldSpaceCameraPos;
     float3 rayDir = normalize(i.viewDir); 
-    
 
     
-    float2 hitInfo = RaySphere(_SphereMaskCenter, _SphereMaskRadius + 5, rayOrigin, rayDir);
+    float2 hitInfo = RaySphere(_SphereMaskCenter, _SphereMaskRadius , rayOrigin, rayDir);
     float3 marchStart = rayOrigin + rayDir * (hitInfo.x + 0.01);
 
     float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
@@ -101,10 +91,10 @@ float4 frag(v2f i) : SV_Target
     
 
     float distThroughVolume = min(hitInfo.y, max(originalSceneDepth - hitInfo.x, 0));
-
+ 
     float2 uv = i.uv;
-    CalculateDistortion(marchStart, rayDir,50, uv);
-    
+    CalculateDistortion(marchStart, rayDir, distThroughVolume == 0? 0: 100, uv);
+   
     float4 col = tex2D(_CameraOpaqueTexture, uv);
     return col.xyzz;
 }

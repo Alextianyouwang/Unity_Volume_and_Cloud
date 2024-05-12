@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b2db86121404754db890f4c8dfe81b2, type: 3}
   m_Name: Bloom
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   skipIterations:
     m_OverrideState: 0
     m_Value: 1
@@ -74,13 +74,13 @@ MonoBehaviour:
     m_Value: 100
   BlendCenter:
     m_OverrideState: 1
-    m_Value: {x: 18, y: 0, z: 0}
+    m_Value: {x: -6.8, y: 0, z: 0}
   BlendRaidus:
     m_OverrideState: 1
-    m_Value: 29.94
+    m_Value: 71.46
   BlendFalloff:
     m_OverrideState: 1
-    m_Value: 10
+    m_Value: 16.2
   EnableRayleighScattering:
     m_OverrideState: 1
     m_Value: 1
@@ -98,13 +98,13 @@ MonoBehaviour:
     m_Value: {r: 0.5330188, g: 0.92077994, b: 1, a: 1}
   AtmosphereUniformAbsorbsion_1:
     m_OverrideState: 1
-    m_Value: 0.085
+    m_Value: 0.123
   AtmosphereAbsorbsionWeightPerChannel_1:
     m_OverrideState: 1
-    m_Value: {r: 0, g: 0.078, b: 0.163, a: 1}
+    m_Value: {r: 0, g: 0.078, b: 0.106, a: 1}
   AtmosphereChannelSplit_1:
     m_OverrideState: 1
-    m_Value: 0.188
+    m_Value: 0.463
   AtmosphereDensityMultiplier_2:
     m_OverrideState: 1
     m_Value: 3
