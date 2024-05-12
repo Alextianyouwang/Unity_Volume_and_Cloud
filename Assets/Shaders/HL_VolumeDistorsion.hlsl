@@ -6,6 +6,9 @@ uint _NumOpticalDepthSample, _NumInScatteringSample;
 float _Rs_Thickness;
 
 
+float3 _SphereMaskCenter;
+float _SphereMaskRadius;
+float _SphereMaskBlend;
 #include "../INCLUDE/HL_AtmosphereHelper.hlsl"
 
 
@@ -53,33 +56,33 @@ inline float LinearEyeDepth(float depth)
     return 1.0 / (z * depth + w);
 }
 
-void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance, float depth, inout float2 uv)
+void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance, inout float2 uv)
 {
-    float stepSize = distance / (_NumInScatteringSample*2 - 1);
+    float stepSize = distance / (_NumInScatteringSample - 1);
     float3 samplePos = rayOrigin;
     float3 totalDir = 0;
     float dist = 0;
     int sampleCount = 0;
-    for (uint i = 0; i < _NumInScatteringSample*2; i++)
+    float fraction = 1 / (float) _NumInScatteringSample;
+    for (uint i = 0; i < _NumInScatteringSample; i++)
     {
         float ring;
         float prevRing = 0;
-        float3 maskCenter;
-        float mask = SphereMask(samplePos, ring, maskCenter);
-        float3 dirToCenter = normalize(prevRing > ring ? maskCenter - samplePos : samplePos - maskCenter);
-        totalDir += dirToCenter * stepSize * ring ;
+        float mask = SphereMask(_SphereMaskCenter, _SphereMaskRadius - 5, 5, samplePos, ring);
+        float3 dirToCenter = normalize(prevRing > ring ? samplePos - _SphereMaskCenter : _SphereMaskCenter - samplePos);
+        totalDir += dirToCenter * stepSize * ring * fraction ;
         sampleCount += 1;
         dist += stepSize;
 
         samplePos = rayOrigin + dist * rayDir;
         prevRing = ring;
     }
-    totalDir /= sampleCount;
-    rayDir += totalDir;
+
     float3 dirVS = mul(UNITY_MATRIX_V, float4(totalDir, 0)).xyz;
+    //rayDir += totalDir;
    // uv = mul(unity_CameraProjection,mul(UNITY_MATRIX_V, float4(rayDir, 0))).xy/2 + 0.5;
     
-    uv += dirVS.xy * 1;
+    uv += dirVS.xy * -0.5;
 
 }
 
@@ -87,22 +90,22 @@ float4 frag(v2f i) : SV_Target
 {
     float3 rayOrigin = _WorldSpaceCameraPos;
     float3 rayDir = normalize(i.viewDir); 
-
-
-    float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
-    float sceneDepthNonLinear = tex2D(_CameraDepthTexture, i.uv).x;
-    float sceneDepth = LinearEyeDepth(sceneDepthNonLinear) /dot(rayDir, forward);
+    
 
     
-    float2 hitInfo = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Rs_Thickness, rayOrigin, rayDir);
-    float distThroughVolume = min(hitInfo.y, max(sceneDepth - hitInfo.x, 0));
+    float2 hitInfo = RaySphere(_SphereMaskCenter, _SphereMaskRadius + 5, rayOrigin, rayDir);
     float3 marchStart = rayOrigin + rayDir * (hitInfo.x + 0.01);
 
-    float2 uv = i.uv;
-    CalculateDistortion(rayOrigin, rayDir, 300, sceneDepth, uv);
-        float4 col = tex2D(_CameraOpaqueTexture, uv);
+    float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
+    float originalSceneDepth = LinearEyeDepth(tex2D(_CameraDepthTexture, i.uv).x) / dot(rayDir, forward);
     
-   //return float4(uv, 0, 0);
-        return col.xyzz;
+
+    float distThroughVolume = min(hitInfo.y, max(originalSceneDepth - hitInfo.x, 0));
+
+    float2 uv = i.uv;
+    CalculateDistortion(marchStart, rayDir,50, uv);
+    
+    float4 col = tex2D(_CameraOpaqueTexture, uv);
+    return col.xyzz;
 }
 #endif

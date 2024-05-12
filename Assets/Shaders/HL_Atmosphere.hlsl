@@ -19,6 +19,11 @@ float4 _Ms_InsColor_1;
 float _Ms_Absorbsion_2, _Ms_DensityMultiplier_2, _Ms_Anisotropic_2;
 float4 _Ms_InsColor_2;
 
+
+float3 _SphereMaskCenter;
+float _SphereMaskRadius;
+float _SphereMaskBlend;
+
 bool _VolumeOnly = 0;
 
 #include "../INCLUDE/HL_AtmosphereHelper.hlsl"
@@ -104,7 +109,7 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
    
         float ring;
         float3 maskCenter;
-        float mask = SphereMask(samplePos, ring, maskCenter);
+        float mask =  SphereMask(_SphereMaskCenter, _SphereMaskRadius, _SphereMaskBlend, samplePos, ring);
         float3 rs_scatteringWeight = 
             mask * lerp(length(_Rs_ScatterWeight_1.xyz) / 3, _Rs_ScatterWeight_1.xyz, _Rs_ChannelSplit_1) * _Rs_Absorbsion_1 +
             (1 - mask) * lerp(length(_Rs_ScatterWeight_2.xyz) / 3, _Rs_ScatterWeight_2.xyz, _Rs_ChannelSplit_2) * _Rs_Absorbsion_2;
