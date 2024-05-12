@@ -65,16 +65,15 @@ void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance,inout f
     for (uint i = 0; i < _NumInScatteringSample; i++)
     {
         float ring;
-        float prevRing = 0;
+    
         float mask = SphereMask(_SphereMaskCenter, _SphereMaskRadius - 5, 5, samplePos, ring);
-        float3 dirToCenter = normalize(prevRing > ring ? samplePos - _SphereMaskCenter : _SphereMaskCenter - samplePos);
+        float3 dirToCenter =  normalize(_SphereMaskCenter - samplePos);
         totalDir += dirToCenter * stepSize * ring * fraction;
         samplePos += rayDir * stepSize;
-        prevRing = ring;
     }
 
     float3 dirVS = mul(UNITY_MATRIX_V, float4(totalDir, 0)).xyz;
-    uv += dirVS.xy * -0.5;
+    uv += dirVS.xy * -0.3;
 }
 
 float4 frag(v2f i) : SV_Target
