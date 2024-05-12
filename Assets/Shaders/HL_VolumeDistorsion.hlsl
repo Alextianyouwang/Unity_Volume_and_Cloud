@@ -93,7 +93,7 @@ float4 frag(v2f i) : SV_Target
     float distThroughVolume = min(hitInfo.y, max(originalSceneDepth - hitInfo.x, 0));
  
     float2 uv = i.uv;
-    CalculateDistortion(marchStart, rayDir, distThroughVolume == 0? 0: 100, uv);
+    CalculateDistortion(marchStart, rayDir, distThroughVolume == 0? 0: hitInfo.y, uv);
    
     float4 col = tex2D(_CameraOpaqueTexture, uv);
     return col.xyzz;

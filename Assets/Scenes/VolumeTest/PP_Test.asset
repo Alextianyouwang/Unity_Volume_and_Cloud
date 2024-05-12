@@ -74,7 +74,7 @@ MonoBehaviour:
     m_Value: 100
   BlendCenter:
     m_OverrideState: 1
-    m_Value: {x: -6.8, y: 0, z: 0}
+    m_Value: {x: 39.7, y: 0, z: 0}
   BlendRaidus:
     m_OverrideState: 1
     m_Value: 71.46
