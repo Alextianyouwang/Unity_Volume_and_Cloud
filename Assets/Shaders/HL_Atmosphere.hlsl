@@ -101,8 +101,10 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
     float fraction = (float) 1 / _NumInScatteringSample;
     for (uint i = 0; i < _NumInScatteringSample; i++)
     {
-
-        float mask = SphereMask(samplePos);
+   
+        float ring;
+        float3 maskCenter;
+        float mask = SphereMask(samplePos, ring, maskCenter);
         float3 rs_scatteringWeight = 
             mask * lerp(length(_Rs_ScatterWeight_1.xyz) / 3, _Rs_ScatterWeight_1.xyz, _Rs_ChannelSplit_1) * _Rs_Absorbsion_1 +
             (1 - mask) * lerp(length(_Rs_ScatterWeight_2.xyz) / 3, _Rs_ScatterWeight_2.xyz, _Rs_ChannelSplit_2) * _Rs_Absorbsion_2;
@@ -113,7 +115,6 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
         ms_finalScatteringWeight += ms_scatteringWeight *fraction ;
         float rs_densityMultiplier = mask * _Rs_DensityMultiplier_1 + (1 - mask) * _Rs_DensityMultiplier_2;
         float ms_densityMultiplier = mask * _Ms_DensityMultiplier_1 + (1 - mask) * _Ms_DensityMultiplier_2;
-        
 #if _USE_MIE
         float ms_phase = PhaseFunction(dot(sunDir, rayDir), mask * _Ms_Anisotropic_1 + (1-mask) *  _Ms_Anisotropic_2);
 #else

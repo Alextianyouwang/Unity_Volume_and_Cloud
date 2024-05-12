@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 public class VolumetricAtmospherePass : ScriptableRenderPass
 {
     private ProfilingSampler _profilingSampler;
-    private RTHandle _rtColor, _rtTempColor;
+    private RTHandle _rtColor, _rtTempColor ,_rtTempColor2;
     private Material _blitMat;
     private RenderTexture _opticDepthTex_external;
     private ComputeShader _baker;
@@ -29,6 +29,7 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
         RenderTextureDescriptor camTargetDesc = renderingData.cameraData.cameraTargetDescriptor;
         camTargetDesc.depthBufferBits = 0;
         RenderingUtils.ReAllocateIfNeeded(ref _rtTempColor, camTargetDesc, FilterMode.Bilinear, TextureWrapMode.Clamp, name: "_TempColor");
+        RenderingUtils.ReAllocateIfNeeded(ref _rtTempColor2, camTargetDesc, FilterMode.Bilinear, TextureWrapMode.Clamp, name: "_TempColor2");
         ConfigureTarget(_rtColor);
         CheckValidation();
     }
@@ -108,6 +109,8 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
             _blitMat.SetInt("_VolumeOnly", _volumeSettings.VolumePassOnly.value ? 1 : 0);
             Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor, _blitMat, 0);
             Blitter.BlitCameraTexture(cmd, _rtTempColor, _rtColor);
+            Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor2, _blitMat, 1);
+            Blitter.BlitCameraTexture(cmd, _rtTempColor2, _rtColor);
         }
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
@@ -163,5 +166,6 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
     {
         _rtColor?.Release();
         _rtTempColor?.Release();
+        _rtTempColor2?.Release();
     }
 }

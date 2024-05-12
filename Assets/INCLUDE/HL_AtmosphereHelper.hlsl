@@ -64,9 +64,14 @@ float3 _SphereMaskCenter;
 float _SphereMaskRadius;
 float _SphereMaskBlend;
 
-float SphereMask(float3 position)
+float SphereMask(float3 position, out float ring, out float3 center )
 {
-    return smoothstep(_SphereMaskRadius - _SphereMaskBlend, _SphereMaskRadius, distance(position, _SphereMaskCenter));
+    float mask0 = smoothstep(_SphereMaskRadius - _SphereMaskBlend, _SphereMaskRadius, distance(position, _SphereMaskCenter));
+    float mask1 = smoothstep(_SphereMaskRadius,_SphereMaskRadius + _SphereMaskBlend , distance(position, _SphereMaskCenter));
+    //mask1 = step(_SphereMaskRadius, distance(position, _SphereMaskCenter));
+    center = _SphereMaskCenter;
+    ring = mask0 - mask1;
+    return mask0;
 
 }
 
