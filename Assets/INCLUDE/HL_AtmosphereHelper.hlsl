@@ -62,10 +62,11 @@ float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength, float3 offs
 
 float3 _SphereMaskCenter;
 float _SphereMaskRadius;
+float _SphereMaskBlend;
 
 float SphereMask(float3 position)
 {
-    return smoothstep(_SphereMaskRadius,_SphereMaskRadius+ 10,distance(position, _SphereMaskCenter));
+    return smoothstep(_SphereMaskRadius - _SphereMaskBlend, _SphereMaskRadius, distance(position, _SphereMaskCenter));
 
 }
 
