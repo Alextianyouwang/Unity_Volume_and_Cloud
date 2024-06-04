@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b2db86121404754db890f4c8dfe81b2, type: 3}
   m_Name: Bloom
   m_EditorClassIdentifier: 
-  active: 0
+  active: 1
   skipIterations:
     m_OverrideState: 0
     m_Value: 1
@@ -74,13 +74,25 @@ MonoBehaviour:
     m_Value: 100
   BlendCenter:
     m_OverrideState: 1
-    m_Value: {x: 39.7, y: 0, z: 0}
+    m_Value: {x: 125.38, y: 0, z: 0}
   BlendRaidus:
     m_OverrideState: 1
-    m_Value: 71.46
+    m_Value: 101.5
   BlendFalloff:
     m_OverrideState: 1
-    m_Value: 16.2
+    m_Value: 29.3
+  EnableDistorsion:
+    m_OverrideState: 1
+    m_Value: 1
+  EnableMask:
+    m_OverrideState: 1
+    m_Value: 1
+  BlendDistortFalloff:
+    m_OverrideState: 1
+    m_Value: 10
+  BlendDistortStrength:
+    m_OverrideState: 1
+    m_Value: 0.2
   EnableRayleighScattering:
     m_OverrideState: 1
     m_Value: 1

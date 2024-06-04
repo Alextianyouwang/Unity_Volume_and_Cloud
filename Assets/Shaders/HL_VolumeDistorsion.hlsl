@@ -1,7 +1,7 @@
 #ifndef VOLUMEDISTORSION_INCLUDE
 #define VOLUMEDISTORSION_INCLUDE
 sampler2D _CameraOpaqueTexture, _CameraDepthTexture;
-float _Camera_Near, _Camera_Far , _EarthRadius;
+float _Camera_Near, _Camera_Far, _EarthRadius;
 uint _NumOpticalDepthSample, _NumInScatteringSample;
 float _Rs_Thickness;
 
@@ -9,6 +9,8 @@ float _Rs_Thickness;
 float3 _SphereMaskCenter;
 float _SphereMaskRadius;
 float _SphereMaskBlend;
+float _SphereMaskDistortBlend;
+float _DistorsionStrength;
 #include "../INCLUDE/HL_AtmosphereHelper.hlsl"
 
 
@@ -56,7 +58,7 @@ inline float LinearEyeDepth(float depth)
     return 1.0 / (z * depth + w);
 }
 
-void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance,inout float2 uv)
+void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance, inout float2 uv, inout float2 uv2, inout float2 uv3)
 {
     float stepSize = distance / (_NumInScatteringSample - 1);
     float3 samplePos = rayOrigin;
@@ -66,23 +68,28 @@ void CalculateDistortion(float3 rayOrigin, float3 rayDir, float distance,inout f
     {
         float ring;
     
-        float mask = SphereMask(_SphereMaskCenter, _SphereMaskRadius - 5, 5, samplePos, ring);
-        float3 dirToCenter =  normalize(_SphereMaskCenter - samplePos);
+        float mask = SphereMask(_SphereMaskCenter, _SphereMaskRadius - 5, _SphereMaskDistortBlend, samplePos, ring);
+        float3 dirToCenter = normalize(_SphereMaskCenter - samplePos);
         totalDir += dirToCenter * stepSize * ring * fraction;
         samplePos += rayDir * stepSize;
     }
 
     float3 dirVS = mul(UNITY_MATRIX_V, float4(totalDir, 0)).xyz;
-    uv += dirVS.xy * -0.3;
+    uv += dirVS.xy * _DistorsionStrength;
+    uv2 += dirVS.xy * _DistorsionStrength;
+    uv3 += dirVS.xy * _DistorsionStrength;
 }
 
 float4 frag(v2f i) : SV_Target
 {
+#ifndef _USE_DISTORSION
+    return tex2D(_CameraOpaqueTexture, i.uv);
+#endif
     float3 rayOrigin = _WorldSpaceCameraPos;
-    float3 rayDir = normalize(i.viewDir); 
+    float3 rayDir = normalize(i.viewDir);
 
     
-    float2 hitInfo = RaySphere(_SphereMaskCenter, _SphereMaskRadius , rayOrigin, rayDir);
+    float2 hitInfo = RaySphere(_SphereMaskCenter, _SphereMaskRadius + _SphereMaskDistortBlend - 5, rayOrigin, rayDir);
     float3 marchStart = rayOrigin + rayDir * (hitInfo.x + 0.01);
 
     float3 forward = mul((float3x3) unity_CameraToWorld, float3(0, 0, 1));
@@ -92,9 +99,15 @@ float4 frag(v2f i) : SV_Target
     float distThroughVolume = min(hitInfo.y, max(originalSceneDepth - hitInfo.x, 0));
  
     float2 uv = i.uv;
-    CalculateDistortion(marchStart, rayDir, distThroughVolume == 0? 0: hitInfo.y, uv);
+    float2 uv2 = i.uv;
+    float2 uv3 = i.uv;
+    CalculateDistortion(marchStart, rayDir, distThroughVolume <= 0 ? 0 : hitInfo.y, uv, uv2, uv3);
    
-    float4 col = tex2D(_CameraOpaqueTexture, uv);
+    float4 col = 0;
+    col.x = tex2D(_CameraOpaqueTexture, uv).x;
+    col.y = tex2D(_CameraOpaqueTexture, uv2).y;
+    col.z = tex2D(_CameraOpaqueTexture, uv3).z;
     return col.xyzz;
+    
 }
 #endif

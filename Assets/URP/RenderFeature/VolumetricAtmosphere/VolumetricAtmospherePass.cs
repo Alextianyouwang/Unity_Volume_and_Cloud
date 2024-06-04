@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 public class VolumetricAtmospherePass : ScriptableRenderPass
 {
     private ProfilingSampler _profilingSampler;
-    private RTHandle _rtColor, _rtTempColor ,_rtTempColor2;
+    private RTHandle _rtColor, _rtTempColor, _rtTempColor2;
     private Material _blitMat;
     private RenderTexture _opticDepthTex_external;
     private ComputeShader _baker;
@@ -15,7 +15,7 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
     {
         _profilingSampler = new ProfilingSampler(name);
     }
-    public void SetData(RTHandle colorHandle,ComputeShader baker, RenderTexture opticalDepthTex, Material blitMat, bool realtime)
+    public void SetData(RTHandle colorHandle, ComputeShader baker, RenderTexture opticalDepthTex, Material blitMat, bool realtime)
     {
         _rtColor = colorHandle;
         _baker = baker;
@@ -66,6 +66,9 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
             _blitMat.SetInt("_NumOpticalDepthSample", _volumeSettings.OpticalDepthSamples.value);
             _blitMat.SetInt("_NumInScatteringSample", _volumeSettings.InscatteringSamples.value);
 
+            _blitMat.SetFloat("_SphereMaskDistortBlend", _volumeSettings.BlendDistortFalloff.value);
+            _blitMat.SetFloat("_DistorsionStrength", _volumeSettings.BlendDistortStrength.value);
+
             LocalKeyword enableRayleigh = new LocalKeyword(_blitMat.shader, "_USE_RAYLEIGH");
             if (_volumeSettings.EnableRayleighScattering.value)
                 _blitMat.EnableKeyword(enableRayleigh);
@@ -109,8 +112,27 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
             _blitMat.SetInt("_VolumeOnly", _volumeSettings.VolumePassOnly.value ? 1 : 0);
             Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor, _blitMat, 0);
             Blitter.BlitCameraTexture(cmd, _rtTempColor, _rtColor);
-            Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor2, _blitMat, 1);
-            Blitter.BlitCameraTexture(cmd, _rtTempColor2, _rtColor);
+
+
+            LocalKeyword enableMask = new LocalKeyword(_blitMat.shader, "_USE_MASK");
+            if (_volumeSettings.EnableMask.value)
+                _blitMat.EnableKeyword(enableMask);
+            else
+                _blitMat.DisableKeyword(enableMask);
+
+            LocalKeyword enableDistorsion = new LocalKeyword(_blitMat.shader, "_USE_DISTORSION");
+            if (_volumeSettings.EnableDistorsion.value && _volumeSettings.EnableMask.value)
+                _blitMat.EnableKeyword(enableDistorsion);
+            else
+                _blitMat.DisableKeyword(enableDistorsion);
+
+
+            if (_volumeSettings.EnableDistorsion.value)
+            {
+                Blitter.BlitCameraTexture(cmd, _rtColor, _rtTempColor2, _blitMat, 1);
+                Blitter.BlitCameraTexture(cmd, _rtTempColor2, _rtColor);
+            }
+
         }
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
@@ -123,7 +145,8 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
         ms_thickness_temp,
         ms_densityFalloff_temp,
         earthRadius_temp;
-    private void CheckValidation() {
+    private void CheckValidation()
+    {
 
         if (
             numOpticalDepthSample_temp != _volumeSettings.OpticalDepthSamples.value
@@ -141,7 +164,7 @@ public class VolumetricAtmospherePass : ScriptableRenderPass
         ms_densityFalloff_temp = _volumeSettings.AerosolsDensityFalloff.value;
         earthRadius_temp = _volumeSettings.EarthRadius.value;
     }
-    public void UpdateBakedTexture() 
+    public void UpdateBakedTexture()
     {
         if (_baker == null)
             return;

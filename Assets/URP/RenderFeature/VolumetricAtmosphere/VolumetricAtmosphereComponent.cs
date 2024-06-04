@@ -15,11 +15,11 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     [Header("Rayleigh Scattering")]
     public BoolParameter EnableRayleighScattering = new BoolParameter(true, BoolParameter.DisplayType.Checkbox, false);
     public FloatParameter AtmosphereHeight = new FloatParameter(100f, false);
-    public ClampedFloatParameter AtmosphereDensityFalloff = new ClampedFloatParameter(1f,1f,10f, false);
+    public ClampedFloatParameter AtmosphereDensityFalloff = new ClampedFloatParameter(1f, 1f, 10f, false);
     public ClampedFloatParameter AtmosphereDensityMultiplier = new ClampedFloatParameter(1f, 0f, 3f, false);
-    public ColorParameter AtmosphereInscatteringTint = new ColorParameter(Color.white,true,false, false);
+    public ColorParameter AtmosphereInscatteringTint = new ColorParameter(Color.white, true, false, false);
     public ClampedFloatParameter AtmosphereUniformAbsorbsion = new ClampedFloatParameter(0.1f, 0f, 1f, false);
-    public ColorParameter AtmosphereAbsorbsionWeightPerChannel = new ColorParameter(new Color(0.01f, 0.03f, 0.08f), false,false,false);
+    public ColorParameter AtmosphereAbsorbsionWeightPerChannel = new ColorParameter(new Color(0.01f, 0.03f, 0.08f), false, false, false);
     public ClampedFloatParameter AtmosphereChannelSplit = new ClampedFloatParameter(1, 0f, 1f, false);
 
 
@@ -34,7 +34,7 @@ public class VolumetricAtmosphereComponent : VolumeComponent, IPostProcessCompon
     public ClampedFloatParameter AerosolsAnistropic = new ClampedFloatParameter(0.7f, 0f, 1f, false);
 
     [Header("Debug")]
-    public BoolParameter VolumePassOnly = new BoolParameter(false, BoolParameter.DisplayType.Checkbox,false);
+    public BoolParameter VolumePassOnly = new BoolParameter(false, BoolParameter.DisplayType.Checkbox, false);
 
     public bool IsTileCompatible()
     {

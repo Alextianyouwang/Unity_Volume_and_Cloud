@@ -1,31 +1,28 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.SceneManagement;
 public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 {
     public bool showInSceneView = true;
     public RenderPassEvent _event = RenderPassEvent.AfterRenderingTransparents;
-
     private VolumetricAtmospherePass _volumePass;
     private Material _blitMat;
 
     private ComputeShader _baker;
     private RenderTexture _opticalDepthTex;
-    public enum PrebakedTextureQuality {Low128,Medium256,High512,Ultra1024,Realtime}
+    public enum PrebakedTextureQuality { Low128, Medium256, High512, Ultra1024, Realtime }
     public PrebakedTextureQuality PrebakedTextureQualitySetting = PrebakedTextureQuality.High512;
     private int resolusion = 512;
     public override void Create()
     {
-        if (_blitMat == null) 
+        if (_blitMat == null)
             _blitMat = CoreUtils.CreateEngineMaterial(Shader.Find("Hidden/S_Atmosphere"));
         _baker = (ComputeShader)Resources.Load("CS/CS_VA_LookuptableBaker");
         CreateRenderRT();
         _volumePass = new VolumetricAtmospherePass(name);
         _volumePass.renderPassEvent = _event;
-
     }
-    private void CreateRenderRT() 
+    private void CreateRenderRT()
     {
         switch (PrebakedTextureQualitySetting)
         {
@@ -64,9 +61,9 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
         if (_opticalDepthTex == null)
             Create();
         if (!ReadyToEnqueue(renderingData)) return;
-        _volumePass.SetData(renderer.cameraColorTargetHandle,_baker, _opticalDepthTex,_blitMat,PrebakedTextureQualitySetting == PrebakedTextureQuality.Realtime);
+        _volumePass.SetData(renderer.cameraColorTargetHandle, _baker, _opticalDepthTex, _blitMat, PrebakedTextureQualitySetting == PrebakedTextureQuality.Realtime);
     }
-    bool ReadyToEnqueue(RenderingData renderingData) 
+    bool ReadyToEnqueue(RenderingData renderingData)
     {
         CameraType cameraType = renderingData.cameraData.cameraType;
         if (cameraType == CameraType.Preview) return false;
@@ -78,7 +75,7 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
     protected override void Dispose(bool disposing)
     {
         _volumePass.Dispose();
-        if (!Application.isPlaying) 
+        if (!Application.isPlaying)
         {
             CoreUtils.Destroy(_blitMat);
             if (_opticalDepthTex != null)

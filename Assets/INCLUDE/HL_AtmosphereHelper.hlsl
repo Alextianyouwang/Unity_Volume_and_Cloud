@@ -36,7 +36,7 @@ float2 RaySphere(float3 sphereCentre, float sphereRadius, float3 rayOrigin, floa
     return float2(MAX_DISTANCE, 0);
 }
 
-float LocalDensity(float3 pos, float3 offset,float relativeHeight, float falloff)
+float LocalDensity(float3 pos, float3 offset, float relativeHeight, float falloff)
 {
     float distToCenter = length(pos - offset);
     float heightAboveSurface = max(distToCenter - _EarthRadius, 0);
@@ -61,7 +61,7 @@ float OpticalDepth(float3 rayOrigin, float3 rayDir, float rayLength, float3 offs
 
 
 
-float SphereMask(float3 center, float radius, float falloff, float3 position, out float ring )
+float SphereMask(float3 center, float radius, float falloff, float3 position, out float ring)
 {
     float mask0 = smoothstep(radius - falloff, radius, distance(position, center));
     float mask1 = smoothstep(radius, radius + falloff, distance(position, center));
