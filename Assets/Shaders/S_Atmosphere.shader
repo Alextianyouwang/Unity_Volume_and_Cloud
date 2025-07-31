@@ -26,7 +26,8 @@ Shader "Hidden/S_Atmosphere"
 #pragma shader_feature_local _ _USE_MASK
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-#include "HL_Atmosphere.hlsl"
+#include "HL_AtmosphereSimple.hlsl"
+//#include "HL_Atmosphere.hlsl"
 
 
             ENDHLSL

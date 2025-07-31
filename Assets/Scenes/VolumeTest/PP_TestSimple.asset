@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b2db86121404754db890f4c8dfe81b2, type: 3}
   m_Name: Bloom
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   skipIterations:
     m_OverrideState: 0
     m_Value: 1
@@ -71,28 +71,28 @@ MonoBehaviour:
     m_Value: 100
   InscatteringSamples:
     m_OverrideState: 1
-    m_Value: 27
+    m_Value: 150
   BlendCenter:
     m_OverrideState: 1
     m_Value: {x: 33.9, y: 0, z: 0}
   BlendRaidus:
     m_OverrideState: 1
-    m_Value: 240.9
+    m_Value: 209.83
   BlendFalloff:
     m_OverrideState: 1
     m_Value: 21.2
   EnableDistorsion:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
   EnableMask:
     m_OverrideState: 1
     m_Value: 1
   BlendDistortFalloff:
     m_OverrideState: 1
-    m_Value: 48.6
+    m_Value: 35.5
   BlendDistortStrength:
     m_OverrideState: 1
-    m_Value: -0.01
+    m_Value: -0.03
   EnableRayleighScattering:
     m_OverrideState: 1
     m_Value: 1
@@ -119,28 +119,28 @@ MonoBehaviour:
     m_Value: 1
   AtmosphereDensityMultiplier_2:
     m_OverrideState: 1
-    m_Value: 1.505
+    m_Value: 0
   AtmosphereInscatteringTint_2:
     m_OverrideState: 1
-    m_Value: {r: 2.1642451, g: 2.1642451, b: 2.1642451, a: 1}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
   AtmosphereUniformAbsorbsion_2:
     m_OverrideState: 1
-    m_Value: 0.001
+    m_Value: 0
   AtmosphereAbsorbsionWeightPerChannel_2:
     m_OverrideState: 1
-    m_Value: {r: 0, g: 0.5104761, b: 1, a: 1}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
   AtmosphereChannelSplit_2:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
   EnableMieScattering:
     m_OverrideState: 1
     m_Value: 1
   AerosolsHeight:
     m_OverrideState: 1
-    m_Value: 117.65
+    m_Value: 1000
   AerosolsDensityFalloff:
     m_OverrideState: 1
-    m_Value: 6.54
+    m_Value: 10
   AerosolsDensityMultiplier_1:
     m_OverrideState: 1
     m_Value: 0.142
@@ -149,22 +149,22 @@ MonoBehaviour:
     m_Value: {r: 0.084905684, g: 0.084905684, b: 0.084905684, a: 1}
   AerosolsUniformAbsorbsion_1:
     m_OverrideState: 1
-    m_Value: 0.371
+    m_Value: 0.546
   AerosolsAnistropic_1:
     m_OverrideState: 1
-    m_Value: 0.137
+    m_Value: 0.947
   AerosolsDensityMultiplier_2:
     m_OverrideState: 1
-    m_Value: 0.187
+    m_Value: 0
   AerosolsInscatteringTint_2:
     m_OverrideState: 1
-    m_Value: {r: 0.3679245, g: 0.3679245, b: 0.3679245, a: 1}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
   AerosolsUniformAbsorbsion_2:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0
   AerosolsAnistropic_2:
     m_OverrideState: 1
-    m_Value: 0.965
+    m_Value: 0
   VolumePassOnly:
     m_OverrideState: 1
     m_Value: 0
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
-  m_Name: PP_Test
+  m_Name: PP_TestSimple
   m_EditorClassIdentifier: 
   components:
   - {fileID: 4122951676378206706}

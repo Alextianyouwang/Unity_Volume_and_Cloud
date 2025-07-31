@@ -89,13 +89,11 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
 {
     float stepSize = distance / (_NumInScatteringSample - 1);
     float3 samplePos = rayOrigin;
-#if _USE_RAYLEIGH
-    float rs_phase = PhaseFunction(dot(sunDir, rayDir), 0);
-#else
-    float rs_phase = 0;
-#endif
+
     float ms_finalPhase = 0;
 
+    float rs_phase = PhaseFunction(dot(sunDir, rayDir), 0);
+    float ms_phase = PhaseFunction(dot(sunDir, rayDir), _Ms_Anisotropic_1);
 
     float rs_viewRayOpticalDepth = 0;
     float ms_viewRayOpticalDepth = 0;
@@ -103,84 +101,39 @@ void AtmosphereicScattering(float3 rayOrigin, float3 rayDir, float3 sunDir, floa
     float3 ms_inscatterLight = 0;
     float3 rs_finalScatteringWeight = 0;
     float ms_finalScatteringWeight = 0;
+    
+    float rs_densityMultiplier = _Rs_DensityMultiplier_1;
+    float ms_densityMultiplier = _Ms_DensityMultiplier_1;
+    float3 rs_scatteringWeight = lerp(length(_Rs_ScatterWeight_1.xyz) * 0.3333333, _Rs_ScatterWeight_1.xyz, _Rs_ChannelSplit_1) * _Rs_Absorbsion_1;
+    float ms_scatteringWeight = _Ms_Absorbsion_1 * 0.01;
+    
     float fraction = (float) 1 / (_NumInScatteringSample - 1);
     for (uint i = 0; i < _NumInScatteringSample; i++)
     {
-
-#if _USE_REALTIME
-         float3 earthCenter = float3(0, -_EarthRadius, 0);
-        float sunRayLength = RaySphere(float3(0, -_EarthRadius, 0), _EarthRadius + _Rs_Thickness, samplePos, sunDir).y;
-#else
         float4 opticalDepthData = OpticalDepthBaked(samplePos, sunDir);
-#endif
-        float ring;
-        float3 maskCenter;
-#if _USE_MASK
-        float mask =  SphereMask(_SphereMaskCenter, _SphereMaskRadius, _SphereMaskBlend, samplePos, ring);
-#else
-        float mask = 0;
-#endif
-   
-        float3 rs_scatteringWeight =
-            mask * lerp(length(_Rs_ScatterWeight_1.xyz) * 0.3333333, _Rs_ScatterWeight_1.xyz, _Rs_ChannelSplit_1) * _Rs_Absorbsion_1 +
-            (1 - mask) * lerp(length(_Rs_ScatterWeight_2.xyz) * 0.3333333, _Rs_ScatterWeight_2.xyz, _Rs_ChannelSplit_2) * _Rs_Absorbsion_2;
-        float ms_scatteringWeight =
-            mask * _Ms_Absorbsion_1 * 0.01 +
-            (1 - mask) * _Ms_Absorbsion_2 *0.01;
         
-        float rs_densityMultiplier = mask * _Rs_DensityMultiplier_1 + (1 - mask) * _Rs_DensityMultiplier_2;
-        float ms_densityMultiplier = mask * _Ms_DensityMultiplier_1 + (1 - mask) * _Ms_DensityMultiplier_2;
-        
-#ifndef _USE_REALTIME
         rs_finalScatteringWeight += rs_scatteringWeight * fraction * opticalDepthData.y * rs_densityMultiplier;
         ms_finalScatteringWeight += ms_scatteringWeight * fraction * opticalDepthData.w * ms_densityMultiplier;
-#endif
-   
 
-#if _USE_MIE
-        float ms_phase = PhaseFunction(dot(sunDir, rayDir), mask * _Ms_Anisotropic_1 + (1-mask) *  _Ms_Anisotropic_2);
-#else
-        float ms_phase = 0;
-#endif
         ms_finalPhase += ms_phase * fraction;
         
-#if _USE_RAYLEIGH
-#if _USE_REALTIME
-
-        float rs_localDensity = LocalDensity(samplePos,earthCenter, _Rs_Thickness, _Rs_DensityFalloff) *stepSize * rs_densityMultiplier;
-        float rs_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength,earthCenter , _Rs_Thickness,_Rs_DensityFalloff) * rs_densityMultiplier;
-        rs_finalScatteringWeight += rs_scatteringWeight * fraction * rs_localDensity  * rs_densityMultiplier;
-
-#else
-        float rs_localDensity = opticalDepthData.y * stepSize * rs_densityMultiplier ;
+        float rs_localDensity = opticalDepthData.y * stepSize * rs_densityMultiplier;
         float rs_sunRayOpticalDepth = opticalDepthData.x * rs_densityMultiplier;
-#endif
+        
         rs_viewRayOpticalDepth += rs_localDensity;
         float3 rs_tau = (rs_viewRayOpticalDepth + rs_sunRayOpticalDepth) * rs_scatteringWeight;
-#else
-        float3 rs_tau = 0;
-        float rs_localDensity = 0;
-#endif
-#if _USE_MIE
-#if _USE_REALTIME
-        float ms_localDensity = LocalDensity(samplePos, earthCenter,_Ms_Thickness, _Ms_DensityFalloff) * stepSize * ms_densityMultiplier;
-        float ms_sunRayOpticalDepth = OpticalDepth(samplePos, sunDir, sunRayLength,earthCenter, _Ms_Thickness, _Ms_DensityFalloff) *ms_densityMultiplier;
-        ms_finalScatteringWeight += ms_scatteringWeight * fraction * ms_localDensity * ms_densityMultiplier;
-#else
+        
         float ms_localDensity = opticalDepthData.w * stepSize * ms_densityMultiplier;
-        float ms_sunRayOpticalDepth =  opticalDepthData.z* ms_densityMultiplier;
-#endif
+        float ms_sunRayOpticalDepth = opticalDepthData.z * ms_densityMultiplier;
+        
         ms_viewRayOpticalDepth += ms_localDensity;
         float3 ms_tau = (ms_sunRayOpticalDepth + ms_viewRayOpticalDepth) * ms_scatteringWeight;
-#else
-        float3 ms_tau = 0;
-        float ms_localDensity = 0;
-#endif
+
         
         float3 totalTransmittance = exp(-rs_tau - ms_tau);
         
-        rs_inscatterLight += totalTransmittance * rs_localDensity * (_Rs_InsColor_1.xyz * mask + (1 - mask) * _Rs_InsColor_2.xyz) * rs_scatteringWeight;
-        ms_inscatterLight += totalTransmittance * ms_localDensity * (_Ms_InsColor_1.xyz * mask + (1 - mask) * _Ms_InsColor_2.xyz) * ms_scatteringWeight;
+        rs_inscatterLight += totalTransmittance * rs_localDensity * _Rs_InsColor_1.xyz * rs_scatteringWeight;
+        ms_inscatterLight += totalTransmittance * ms_localDensity * _Ms_InsColor_1.xyz * ms_scatteringWeight;
         samplePos += rayDir * stepSize;
     }
     rs_inscatterLight *= rs_phase;
