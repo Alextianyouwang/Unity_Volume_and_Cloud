@@ -65,7 +65,7 @@ MonoBehaviour:
     m_Value: 1
   EarthRadius:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 1
   OpticalDepthSamples:
     m_OverrideState: 1
     m_Value: 100
@@ -98,22 +98,22 @@ MonoBehaviour:
     m_Value: 1
   AtmosphereHeight:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 9.58
   AtmosphereDensityFalloff:
     m_OverrideState: 1
-    m_Value: 10
+    m_Value: 1
   AtmosphereDensityMultiplier_1:
     m_OverrideState: 1
-    m_Value: 0.995
+    m_Value: 3
   AtmosphereInscatteringTint_1:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   AtmosphereUniformAbsorbsion_1:
     m_OverrideState: 1
-    m_Value: 0.017
+    m_Value: 1
   AtmosphereAbsorbsionWeightPerChannel_1:
     m_OverrideState: 1
-    m_Value: {r: 0.17, g: 0.546, b: 1, a: 1}
+    m_Value: {r: 0.099, g: 0.418, b: 0.887, a: 1}
   AtmosphereChannelSplit_1:
     m_OverrideState: 1
     m_Value: 1
@@ -137,22 +137,22 @@ MonoBehaviour:
     m_Value: 1
   AerosolsHeight:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 10
   AerosolsDensityFalloff:
     m_OverrideState: 1
-    m_Value: 10
+    m_Value: 1
   AerosolsDensityMultiplier_1:
     m_OverrideState: 1
-    m_Value: 0.062
+    m_Value: 3
   AerosolsInscatteringTint_1:
     m_OverrideState: 1
-    m_Value: {r: 0.09411765, g: 0.043500468, b: 0, a: 1}
+    m_Value: {r: 0.4245283, g: 0.2023695, b: 0.014017452, a: 1}
   AerosolsUniformAbsorbsion_1:
     m_OverrideState: 1
     m_Value: 0.546
   AerosolsAnistropic_1:
     m_OverrideState: 1
-    m_Value: 0.856
+    m_Value: 0.88
   AerosolsDensityMultiplier_2:
     m_OverrideState: 1
     m_Value: 0
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
-  m_Name: PP_TestSimple
+  m_Name: PP_TestSimpleSmall
   m_EditorClassIdentifier: 
   components:
   - {fileID: 4122951676378206706}
