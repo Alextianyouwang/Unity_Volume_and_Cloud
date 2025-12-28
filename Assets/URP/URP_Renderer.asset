@@ -31,26 +31,6 @@ MonoBehaviour:
   m_Active: 1
   settings:
     CloudRenderingMaterial: {fileID: 2100000, guid: 06b06cd961a8573408f318b77fac79bb, type: 2}
---- !u!114 &-748153206849417119
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
-  m_Name: FullScreenPassRendererFeature
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
-  m_Active: 0
-  injectionPoint: 600
-  fetchColorBuffer: 1
-  requirements: 0
-  passMaterial: {fileID: 2100000, guid: 10c17557990b7b44a8c53dfda856f7d3, type: 2}
-  passIndex: 0
-  bindDepthStencilAttachment: 0
-  m_Version: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -78,8 +58,7 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -4357856721705871946}
   - {fileID: -4028457332071229778}
-  - {fileID: -748153206849417119}
-  m_RendererFeatureMap: b655ac8866c885c3ae961371660b18c861d02b4c9f069ef5
+  m_RendererFeatureMap: b655ac8866c885c3ae961371660b18c8
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -101,7 +80,7 @@ MonoBehaviour:
     failOperation: 0
     zFailOperation: 0
   m_ShadowTransparentReceive: 1
-  m_RenderingMode: 0
+  m_RenderingMode: 2
   m_DepthPrimingMode: 0
   m_CopyDepthMode: 0
   m_DepthAttachmentFormat: 0

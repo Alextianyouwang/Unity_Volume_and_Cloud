@@ -20,9 +20,9 @@ namespace Experimental.Rendering.CloudRendering
             renderer.EnqueuePass(_scriptablePass);
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            _scriptablePass.Dispose();
-        }
+       // protected override void Dispose(bool disposing)
+       // {
+       //     _scriptablePass.Dispose();
+       // }
     }
 }
