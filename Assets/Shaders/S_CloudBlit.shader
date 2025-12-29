@@ -1,5 +1,10 @@
 Shader "Custom/S_CloudBlit"
 {   
+
+    Properties
+    {
+        _CloudGlobalDensityMultiplier ("Cloud Global Density Multiplier", Float) = 1.0
+    }
     SubShader
     {
         HLSLINCLUDE
@@ -21,6 +26,11 @@ Shader "Custom/S_CloudBlit"
 
             float3 _BoxMin;
             float3 _BoxMax;
+
+            float _CloudGlobalDensityMultiplier;
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            #define STEP_COUNT 128
 
             // Returns (dstToBox, dstInsideBox).
             // If ray misses box, dstInsideBox will be zero.
@@ -49,21 +59,72 @@ Shader "Custom/S_CloudBlit"
             
                 return float2(dstToBox, dstInsideBox);
             }
+
+            //developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-16-accurate-atmospheric-scattering
+            float PhaseFunction(float costheta, float g)
+            {
+                float g2 = g * g;
+                float symmetry = (3 * (1 - g2)) / (2 * (2 + g2));
+                return (1 + costheta * costheta) / pow(abs(1 + g2 - 2 * g * costheta), 1.5);
+            
+            }
+
+            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength) 
+            {
+                float viewRayOpticalDepth = 0;
+                float opticalDepth = 0;
+                float stepSize = rayLength / STEP_COUNT;
+
+                Light mainLight = GetMainLight();
+                float3 mainLightDir = mainLight.direction;
+
+                float viewRayDistance = 0;  
+                
+
+                for (int i = 0 ; i< STEP_COUNT; i++)
+                {
+                    float3 samplePoint = rayOrigin + rayDir * viewRayDistance;
+                    float sunRayDistance = 0;
+                    float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin + rayDir * (i * stepSize), mainLightDir);
+                    float sunRayStepSize = sunRayIntersection.y / STEP_COUNT;
+
+                    float localDensity =  _CloudGlobalDensityMultiplier;
+                    viewRayOpticalDepth += localDensity * stepSize;
+                    for (int j = 0; j< STEP_COUNT; j++)
+                    {
+                        float3 sunRaySamplePoint = samplePoint + mainLightDir * sunRayDistance;
+
+                        float sunRaylocalDensity = _CloudGlobalDensityMultiplier;
+                        opticalDepth += sunRayStepSize * sunRaylocalDensity;
+
+                        sunRayDistance += sunRayStepSize ;
+                    }
+
+                    viewRayDistance += stepSize;
+                }
+
+                float transmittance = 1- exp(-viewRayOpticalDepth);
+                return transmittance;    
+            }
  
             float4 Frag (Varyings input) : SV_Target
             {
                 float3 rayOrigin = _WorldSpaceCameraPos;
                 float2 uv = input.texcoord;
                 float2 ndc = uv * 2.0 - 1.0;
-                float3 viewDirVS = mul(unity_CameraInvProjection, float4(ndc, 0, -1)).xyz;
-                float3 viewDirWS = normalize(mul(unity_CameraToWorld, float4 (viewDirVS,0))).xyz;
+                float4 viewDirVS = mul(unity_CameraInvProjection, float4(ndc, 0, -1));
+
+                float3 viewDirWS = normalize(mul(unity_CameraToWorld, float4 (viewDirVS.xyz,0))).xyz;
 
                 float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
                 float4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord).rgba;
 
-                
+                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, intersection.y);
 
-                return   lerp (color, color * intersection.x * 0.1f,  intersection.y > 0)  ;
+
+                return lerp (color,1 ,cloudRadiance.x);
+                return cloudRadiance.x;
+                return   lerp (color, color * intersection.y * 0.1f,  intersection.y > 0)  ;
             }
             
             ENDHLSL
