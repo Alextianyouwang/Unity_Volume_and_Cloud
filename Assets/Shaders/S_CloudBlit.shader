@@ -128,10 +128,17 @@
                 return sunRayOpticalDepth;
             }
 
-   float BeerPowder(float d)
+// Beer-Powder: used for LIGHT rays only (simulates powder/self-shadowing effect)
+// The (1 - exp(-2d)) term adds extra darkening deep in the cloud
+float BeerPowder(float d)
 {
-    float e = exp(-d);
-    return e * (1.0 - e * e);
+    return exp(-d) * (1.0 - exp(-2.0 * d));
+}
+
+// Standard Beer's law: used for VIEW ray transmittance
+float Beer(float d)
+{
+    return exp(-d);
 }
 float HGPhase(float cosTheta, float g)
 {
@@ -152,6 +159,7 @@ float HGPhase(float cosTheta, float g)
                 float3 irradiance = 0;
 
                 float cosTheta = dot(normalize(viewDirWS), mainLightDir);
+                // Hack
                 float phase = HGPhase(cosTheta, 0.76); 
 
                 for (int i = 0; i < STEP_COUNT; i++)
@@ -164,18 +172,20 @@ float HGPhase(float cosTheta, float g)
 
                     float localDensity = GetLocalDensity(samplePoint);
                     viewRayOpticalDepth += localDensity * stepSize;
-                    float viewRayTransmittance = BeerPowder(viewRayOpticalDepth) * phase;
+                    
+
+                    // Hack
+                    float viewRayTransmittance = Beer(viewRayOpticalDepth * 0.3);
                     
                     // === Main Directional Light ===
                     float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
-                    float sunRayTransmittance = BeerPowder(sunRayOpticalDepth * 0.5);
+                    // Light ray uses BeerPowder for the powder/self-shadowing effect
+                    float sunRayTransmittance = BeerPowder(sunRayOpticalDepth);
                     
                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
                     half shadow = MainLightRealtimeShadow(shadowCoord);
                     
-                    // Contribution from main light
-                    irradiance += mainLight.color * sunRayTransmittance * localDensity * stepSize * viewRayTransmittance * shadow;
-
+                    irradiance += mainLight.color * sunRayTransmittance * localDensity * stepSize * viewRayTransmittance * shadow * phase;
 
                     // === Additional Point Lights (using custom volumetric light data) ===
                     for (int lightIdx = 0; lightIdx < _VolumetricLightCount; lightIdx++)
@@ -221,7 +231,8 @@ float HGPhase(float cosTheta, float g)
                     viewRayDistance += stepSize;
                 }
 
-                transmittance = exp(-viewRayOpticalDepth);
+                // Final transmittance uses same Beer's law as the loop
+                transmittance = Beer(viewRayOpticalDepth);
 
                 return irradiance;
             }
@@ -247,8 +258,10 @@ float HGPhase(float cosTheta, float g)
                 float transmittance = 0;
                 float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS,viewDirWS, transmittance);
 
-                // Blend cloud radiance with scene color based on transmittance
-                return float4(lerp(cloudRadiance, color.rgb, transmittance), color.a);
+                // Standard volume rendering compositing: in-scattered + attenuated background
+
+                float3 finalColor = cloudRadiance + color.rgb * transmittance;
+                return float4(finalColor,1);
             }
             
             ENDHLSL
