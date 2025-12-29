@@ -41,7 +41,7 @@ Shader "Custom/S_CloudBlit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            #define STEP_COUNT 32
+            #define STEP_COUNT 16
 
             float ConvertToLinearEyeDepth(float depth)
             {
@@ -122,14 +122,13 @@ Shader "Custom/S_CloudBlit"
                     {
                         break;
                     }
-                    for (int j = 0; j< STEP_COUNT; j++)
+                    for (int j = 0; j < STEP_COUNT; j++)
                     {
+                        sunRayDistance += sunRayStepSize ;
                         float3 sunRaySamplePoint = samplePoint + mainLightDir * sunRayDistance;
 
                         float sunRaylocalDensity = _CloudGlobalDensityMultiplier;
                         opticalDepth += sunRayStepSize * sunRaylocalDensity;
-
-                        sunRayDistance += sunRayStepSize ;
                     }
 
                     viewRayDistance += stepSize;
@@ -156,7 +155,6 @@ Shader "Custom/S_CloudBlit"
                 if (distanceToCubeCameraForward > sceneDepth)
                     return color;
 
-                intersection.x = min (distanceToCubeCameraForward, intersection.x);
                 float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
                 float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS);
 
