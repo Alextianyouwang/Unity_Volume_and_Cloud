@@ -93,9 +93,12 @@ Shader "Custom/S_CloudBlit"
             
             }
 
+            float GetLocalDensity(float3 pos)
+            {
+                return _CloudGlobalDensityMultiplier * (1 - smoothstep( 0.2,0.8, Worley3D(pos * 0.2)));
+            }
 
-
-            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS) 
+            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, out float transmittance) 
             {
                 float viewRayOpticalDepth = 0;
                 float opticalDepth = 0;
@@ -105,7 +108,7 @@ Shader "Custom/S_CloudBlit"
                 float3 mainLightDir = mainLight.direction;
 
                 float viewRayDistance = 0;  
-                
+                float irradiance = 0;
 
                 for (int i = 0 ; i< STEP_COUNT; i++)
                 {
@@ -113,28 +116,38 @@ Shader "Custom/S_CloudBlit"
                     float sunRayDistance = 0;
                     float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin + rayDir * (i * stepSize), mainLightDir);
                     float sunRayStepSize = sunRayIntersection.y / STEP_COUNT;
+                    float sunRayOpticalDepth = 0;
 
-                   // float localDensity =   _CloudGlobalDensityMultiplier * WorleyFBM (samplePoint, _Octave, _Persistance, _Lacunarity);
-                    float localDensity =   _CloudGlobalDensityMultiplier * smoothstep (0.2,0.8, 1-  Worley3D (0.3 * samplePoint));
-                    viewRayOpticalDepth += localDensity * stepSize;
+                    float sunRayIrradiance  = 0;
 
-                    if (distance (samplePoint, _WorldSpaceCameraPos)* dot(normalize(viewDirVS), float3 (0,0,1)) > depth)
-                    {
-                        break;
-                    }
                     for (int j = 0; j < STEP_COUNT; j++)
                     {
+
+                        if (distance (samplePoint, _WorldSpaceCameraPos)* dot(normalize(viewDirVS), float3 (0,0,1)) > depth)
+                            break;
+
                         sunRayDistance += sunRayStepSize ;
                         float3 sunRaySamplePoint = samplePoint + mainLightDir * sunRayDistance;
 
-                        float sunRaylocalDensity = _CloudGlobalDensityMultiplier;
-                        opticalDepth += sunRayStepSize * sunRaylocalDensity;
+                        float sunRaylocalDensity = GetLocalDensity(samplePoint);
+                        sunRayOpticalDepth += sunRayStepSize * sunRaylocalDensity;
+                        float sunRayLocalTransmittance = exp(-sunRayOpticalDepth);
+                        sunRayIrradiance += sunRayLocalTransmittance * sunRaylocalDensity * sunRayStepSize;
                     }
+
+                    float localDensity = GetLocalDensity(samplePoint);
+                    viewRayOpticalDepth += localDensity * stepSize;
+                    float viewRayLocalTransmittance = exp(-viewRayOpticalDepth);
+                    irradiance += sunRayIrradiance * viewRayLocalTransmittance * localDensity * stepSize;
+
+
 
                     viewRayDistance += stepSize;
                 }
 
-                float transmittance = 1- exp(-viewRayOpticalDepth);
+                transmittance =  exp(-viewRayOpticalDepth);
+
+                return 1- irradiance;
                 return transmittance;    
             }
  
@@ -156,9 +169,11 @@ Shader "Custom/S_CloudBlit"
                     return color;
 
                 float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
-                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS);
+                float transmittance = 0;
+                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS, transmittance);
 
-                return lerp (color,1 ,cloudRadiance.x);
+                //return cloudRadiance.xxxx;
+                return lerp ( cloudRadiance.x, color ,transmittance);
                 return cloudRadiance.x;
                 return   lerp (color, color * intersection.y * 0.1f,  intersection.y > 0);
             }

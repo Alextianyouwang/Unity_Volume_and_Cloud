@@ -31,8 +31,8 @@ MonoBehaviour:
   m_Active: 1
   settings:
     CloudRenderingMaterial: {fileID: 2100000, guid: 06b06cd961a8573408f318b77fac79bb, type: 2}
-    BoxMin: {x: -10, y: -2, z: -10}
-    BoxMax: {x: 10, y: 2, z: 10}
+    BoxMin: {x: -20, y: -5, z: -20}
+    BoxMax: {x: 20, y: 5, z: 20}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
