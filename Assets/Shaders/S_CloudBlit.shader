@@ -95,7 +95,7 @@ Shader "Custom/S_CloudBlit"
 
 
 
-            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth) 
+            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS) 
             {
                 float viewRayOpticalDepth = 0;
                 float opticalDepth = 0;
@@ -118,7 +118,7 @@ Shader "Custom/S_CloudBlit"
                     float localDensity =   _CloudGlobalDensityMultiplier * smoothstep (0.2,0.8, 1-  Worley3D (0.3 * samplePoint));
                     viewRayOpticalDepth += localDensity * stepSize;
 
-                    if (distance (samplePoint, _WorldSpaceCameraPos) > depth)
+                    if (distance (samplePoint, _WorldSpaceCameraPos)* dot(normalize(viewDirVS), float3 (0,0,1)) > depth)
                     {
                         break;
                     }
@@ -145,24 +145,24 @@ Shader "Custom/S_CloudBlit"
                 float2 uv = input.texcoord;
                 float2 ndc = uv * 2.0 - 1.0;
                 float4 viewDirVS = mul(unity_CameraInvProjection, float4(ndc, 0, -1));
-
                 float3 viewDirWS = normalize(mul(unity_CameraToWorld, float4 (viewDirVS.xyz,0))).xyz;
 
-                float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
                 float4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord).rgba;
-
                 float sceneDepthNonLinear = tex2D(_CameraDepthTexture, uv).x;
                 float sceneDepth = ConvertToLinearEyeDepth(sceneDepthNonLinear);
 
-                if (intersection.x > sceneDepth)
+                float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
+                float distanceToCubeCameraForward = intersection.x * dot(normalize( viewDirVS.xyz), float3 (0,0,1));
+                if (distanceToCubeCameraForward > sceneDepth)
                     return color;
 
-                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, intersection.y, sceneDepth);
+                intersection.x = min (distanceToCubeCameraForward, intersection.x);
+                float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
+                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS);
 
-    
                 return lerp (color,1 ,cloudRadiance.x);
                 return cloudRadiance.x;
-                return   lerp (color, color * intersection.y * 0.1f,  intersection.y > 0)  ;
+                return   lerp (color, color * intersection.y * 0.1f,  intersection.y > 0);
             }
             
             ENDHLSL
