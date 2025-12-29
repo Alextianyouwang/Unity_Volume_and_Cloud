@@ -26,8 +26,8 @@ Shader "Custom/S_CloudBlit"
             
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
 
             float3 _BoxMin;
             float3 _BoxMax;
@@ -39,6 +39,13 @@ Shader "Custom/S_CloudBlit"
             float _Camera_Near, _Camera_Far;
 
             sampler2D _CameraDepthTexture;
+            
+            // Custom volumetric light data (passed from C#)
+            #define MAX_VOLUMETRIC_LIGHTS 8
+            int _VolumetricLightCount;
+            float4 _VolumetricLightPositions[MAX_VOLUMETRIC_LIGHTS];
+            float4 _VolumetricLightColors[MAX_VOLUMETRIC_LIGHTS];
+            float _VolumetricLightRanges[MAX_VOLUMETRIC_LIGHTS];
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -102,6 +109,26 @@ Shader "Custom/S_CloudBlit"
                 return _CloudGlobalDensityMultiplier * (1 - smoothstep( 0.2,0.8, Worley3D(pos * 0.2)));
             }
 
+            float ResolveLightRayDepth(float3 direction, float3 origin) 
+            {
+
+                float sunRayDistance = 0;
+                float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, origin,direction);
+                float sunRayStepSize = sunRayIntersection.y / STEP_COUNT_SUNRAY;
+                float sunRayOpticalDepth = 0;
+                for (int j = 0; j < STEP_COUNT_SUNRAY; j++)
+                {
+                    sunRayDistance += sunRayStepSize;
+                    float3 sunRaySamplePoint = origin + direction * sunRayDistance;
+
+                    float sunRaylocalDensity = GetLocalDensity(sunRaySamplePoint);
+                    sunRayOpticalDepth += sunRayStepSize * sunRaylocalDensity;
+                }
+                return sunRayOpticalDepth;
+            }
+
+   
+
             float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, out float transmittance) 
             {
                 float viewRayOpticalDepth = 0;
@@ -111,51 +138,78 @@ Shader "Custom/S_CloudBlit"
                 float3 mainLightDir = mainLight.direction;
 
                 float viewRayDistance = 0;  
-                float irradiance = 0;
+                float3 irradiance = 0;
 
-                for (int i = 0 ; i< STEP_COUNT; i++)
+                for (int i = 0; i < STEP_COUNT; i++)
                 {
                     float3 samplePoint = rayOrigin + rayDir * viewRayDistance;
                     
                     // Early exit if we've passed the scene depth
                     if (distance(samplePoint, _WorldSpaceCameraPos) * dot(normalize(viewDirVS), float3(0,0,1)) > depth)
                         break;
-                    
-                    float sunRayDistance = 0;
-                    float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, samplePoint, mainLightDir);
-                    float sunRayStepSize = sunRayIntersection.y / STEP_COUNT_SUNRAY;
-                    float sunRayOpticalDepth = 0;
-                    for (int j = 0; j < STEP_COUNT_SUNRAY; j++)
-                    {
-                        sunRayDistance += sunRayStepSize;
-                        float3 sunRaySamplePoint = samplePoint + mainLightDir * sunRayDistance;
-
-                        float sunRaylocalDensity = GetLocalDensity(sunRaySamplePoint);
-                        sunRayOpticalDepth += sunRayStepSize * sunRaylocalDensity;
-
-                       
-                    }
-                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
-                     half shadow = MainLightRealtimeShadow(shadowCoord);
-     
-                    // Transmittance from sun to this sample point
-                    float sunRayTransmittance = exp(-sunRayOpticalDepth);
 
                     float localDensity = GetLocalDensity(samplePoint);
                     viewRayOpticalDepth += localDensity * stepSize;
                     float viewRayTransmittance = exp(-viewRayOpticalDepth);
                     
-                    // In-scattered light: sunlight reaching this point * density * step * view transmittance
-                    irradiance += sunRayTransmittance * localDensity * stepSize * viewRayTransmittance * shadow;
+                    // === Main Directional Light ===
+                    float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
+                    float sunRayTransmittance = exp(-sunRayOpticalDepth);
+                    
+                    float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
+                    half shadow = MainLightRealtimeShadow(shadowCoord);
+                    
+                    // Contribution from main light
+                    irradiance += mainLight.color * sunRayTransmittance * localDensity * stepSize * viewRayTransmittance * shadow;
 
 
+                    // === Additional Point Lights (using custom volumetric light data) ===
+                    for (int lightIdx = 0; lightIdx < _VolumetricLightCount; lightIdx++)
+                    {
+                        float3 lightPos = _VolumetricLightPositions[lightIdx].xyz;
+                        float3 lightColor = _VolumetricLightColors[lightIdx].rgb;
+                        float lightRange = _VolumetricLightRanges[lightIdx];
+                        
+                        float3 toLight = lightPos - samplePoint;
+                        float distanceToLight = length(toLight);
+                        
+                        // Skip if outside light range
+                        if (distanceToLight > lightRange)
+                            continue;
+                        
+                        float3 lightDir = toLight / distanceToLight;
+                        
+                        // Distance attenuation (inverse square falloff with range limit)
+                        float distanceAttenuation = saturate(1.0 - distanceToLight / lightRange);
+                        distanceAttenuation *= distanceAttenuation; // Quadratic falloff
+                        
+                        // March toward the light to calculate optical depth
+                        float2 lightRayIntersection = rayBoxDst(_BoxMin, _BoxMax, samplePoint, lightDir);
+                        float marchDistance = min(lightRayIntersection.y, distanceToLight);
+                        float lightStepSize = marchDistance / STEP_COUNT_SUNRAY;
+                        
+                        float lightRayOpticalDepth = 0;
+                        float lightRayDistance = 0;
+                        
+                        for (int k = 0; k < STEP_COUNT_SUNRAY; k++)
+                        {
+                            lightRayDistance += lightStepSize;
+                            float3 lightRaySamplePoint = samplePoint + lightDir * lightRayDistance;
+                            lightRayOpticalDepth += lightStepSize * GetLocalDensity(lightRaySamplePoint);
+                        }
+                        
+                        float lightRayTransmittance = exp(-lightRayOpticalDepth);
+                        
+                        // Contribution from this point light
+                        irradiance += lightColor * distanceAttenuation * lightRayTransmittance * localDensity * stepSize * viewRayTransmittance;
+                    }
 
                     viewRayDistance += stepSize;
                 }
 
                 transmittance = exp(-viewRayOpticalDepth);
 
-                return  irradiance ;
+                return irradiance;
             }
  
             float4 Frag (Varyings input) : SV_Target
@@ -179,10 +233,8 @@ Shader "Custom/S_CloudBlit"
                 float transmittance = 0;
                 float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS, transmittance);
 
-                //return cloudRadiance.xxxx;
-                return lerp ( cloudRadiance.x, color ,transmittance);
-                return cloudRadiance.x;
-                return   lerp (color, color * intersection.y * 0.1f,  intersection.y > 0);
+                // Blend cloud radiance with scene color based on transmittance
+                return float4(lerp(cloudRadiance, color.rgb, transmittance), color.a);
             }
             
             ENDHLSL
