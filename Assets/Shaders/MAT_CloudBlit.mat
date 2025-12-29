@@ -25,10 +25,10 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CloudGlobalDensityMultiplier: 0.3
-    - _Lacunarity: 0.52
+    - _CloudGlobalDensityMultiplier: 0.02
+    - _Lacunarity: 3
     - _Octave: 3
-    - _Persistance: 4.21
+    - _Persistance: 0.73
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

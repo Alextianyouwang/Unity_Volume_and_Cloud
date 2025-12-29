@@ -1,4 +1,4 @@
-Shader "Custom/S_CloudBlit"
+﻿Shader "Custom/S_CloudBlit"
 {   
 
     Properties
@@ -106,7 +106,8 @@ Shader "Custom/S_CloudBlit"
 
             float GetLocalDensity(float3 pos)
             {
-                return _CloudGlobalDensityMultiplier * (1 - smoothstep( 0.2,0.8, Worley3D(pos * 0.2)));
+                return _CloudGlobalDensityMultiplier * ( smoothstep( 0.2,0.8, WorleyFBM(pos * 0.01, _Octave,_Persistance,_Lacunarity)));
+               // return _CloudGlobalDensityMultiplier * ( 1 - smoothstep( 0.2,0.8, Worley3D(pos * 0.1)));
             }
 
             float ResolveLightRayDepth(float3 direction, float3 origin) 
@@ -127,9 +128,19 @@ Shader "Custom/S_CloudBlit"
                 return sunRayOpticalDepth;
             }
 
-   
+   float BeerPowder(float d)
+{
+    float e = exp(-d);
+    return e * (1.0 - e * e);
+}
+float HGPhase(float cosTheta, float g)
+{
+    float g2 = g * g;
+    float denom = pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5);
+    return (1.0 - g2) / denom;
+}
 
-            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, out float transmittance) 
+            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, float3 viewDirWS, out float transmittance) 
             {
                 float viewRayOpticalDepth = 0;
                 float stepSize = rayLength / STEP_COUNT;
@@ -139,6 +150,9 @@ Shader "Custom/S_CloudBlit"
 
                 float viewRayDistance = 0;  
                 float3 irradiance = 0;
+
+                float cosTheta = dot(normalize(viewDirWS), mainLightDir);
+                float phase = HGPhase(cosTheta, 0.76); 
 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
@@ -150,11 +164,11 @@ Shader "Custom/S_CloudBlit"
 
                     float localDensity = GetLocalDensity(samplePoint);
                     viewRayOpticalDepth += localDensity * stepSize;
-                    float viewRayTransmittance = exp(-viewRayOpticalDepth);
+                    float viewRayTransmittance = BeerPowder(viewRayOpticalDepth) * phase;
                     
                     // === Main Directional Light ===
                     float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
-                    float sunRayTransmittance = exp(-sunRayOpticalDepth);
+                    float sunRayTransmittance = BeerPowder(sunRayOpticalDepth * 0.5);
                     
                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
                     half shadow = MainLightRealtimeShadow(shadowCoord);
@@ -231,7 +245,7 @@ Shader "Custom/S_CloudBlit"
 
                 float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
                 float transmittance = 0;
-                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS, transmittance);
+                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS,viewDirWS, transmittance);
 
                 // Blend cloud radiance with scene color based on transmittance
                 return float4(lerp(cloudRadiance, color.rgb, transmittance), color.a);
