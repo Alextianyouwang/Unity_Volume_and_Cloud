@@ -4,12 +4,16 @@ Shader "Custom/S_CloudBlit"
     Properties
     {
         _CloudGlobalDensityMultiplier ("Cloud Global Density Multiplier", Float) = 1.0
+        _Octave ("Octave", Int) = 5
+        _Persistance ("Persistance", Float) = 1
+        _Lacunarity ("Lacunarity", Float) = 1
     }
     SubShader
     {
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+        #include "../Resources/HL_Noise.hlsl"
         ENDHLSL
 
         Tags { "RenderType"="Opaque" }
@@ -28,9 +32,29 @@ Shader "Custom/S_CloudBlit"
             float3 _BoxMax;
 
             float _CloudGlobalDensityMultiplier;
+            int   _Octave;
+            float _Persistance;
+            float _Lacunarity;
+            float _Camera_Near, _Camera_Far;
+
+            sampler2D _CameraDepthTexture;
+
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            #define STEP_COUNT 128
+            #define STEP_COUNT 32
+
+            float ConvertToLinearEyeDepth(float depth)
+            {
+                // Handle reversed Z buffer
+                depth = 1.0 - depth;
+                
+                float x = 1.0 - _Camera_Far / _Camera_Near;
+                float y = _Camera_Far / _Camera_Near;
+                float z = x / _Camera_Far;
+                float w = y / _Camera_Far;
+                
+                return 1.0 / (z * depth + w);
+            }
 
             // Returns (dstToBox, dstInsideBox).
             // If ray misses box, dstInsideBox will be zero.
@@ -69,7 +93,9 @@ Shader "Custom/S_CloudBlit"
             
             }
 
-            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength) 
+
+
+            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth) 
             {
                 float viewRayOpticalDepth = 0;
                 float opticalDepth = 0;
@@ -88,8 +114,14 @@ Shader "Custom/S_CloudBlit"
                     float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin + rayDir * (i * stepSize), mainLightDir);
                     float sunRayStepSize = sunRayIntersection.y / STEP_COUNT;
 
-                    float localDensity =  _CloudGlobalDensityMultiplier;
+                   // float localDensity =   _CloudGlobalDensityMultiplier * WorleyFBM (samplePoint, _Octave, _Persistance, _Lacunarity);
+                    float localDensity =   _CloudGlobalDensityMultiplier * smoothstep (0.2,0.8, 1-  Worley3D (0.3 * samplePoint));
                     viewRayOpticalDepth += localDensity * stepSize;
+
+                    if (distance (samplePoint, _WorldSpaceCameraPos) > depth)
+                    {
+                        break;
+                    }
                     for (int j = 0; j< STEP_COUNT; j++)
                     {
                         float3 sunRaySamplePoint = samplePoint + mainLightDir * sunRayDistance;
@@ -119,9 +151,15 @@ Shader "Custom/S_CloudBlit"
                 float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
                 float4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord).rgba;
 
-                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, intersection.y);
+                float sceneDepthNonLinear = tex2D(_CameraDepthTexture, uv).x;
+                float sceneDepth = ConvertToLinearEyeDepth(sceneDepthNonLinear);
 
+                if (intersection.x > sceneDepth)
+                    return color;
 
+                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, intersection.y, sceneDepth);
+
+    
                 return lerp (color,1 ,cloudRadiance.x);
                 return cloudRadiance.x;
                 return   lerp (color, color * intersection.y * 0.1f,  intersection.y > 0)  ;

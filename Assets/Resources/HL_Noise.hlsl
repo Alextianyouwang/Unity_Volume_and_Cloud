@@ -73,4 +73,66 @@ float  ace_worley(float3 coord, int axisCellCount) {
     return dist;
 }
 
+
+float3 Hash3(float3 p)
+{
+    p = frac(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return frac((p.xxy + p.yzz) * p.zyx);
+}
+
+float Worley3D(float3 p)
+{
+    float3 cell = floor(p);
+    float3 localPos = frac(p);
+
+    float minDist = 1e6;
+
+    // Search neighboring cells
+    [unroll]
+    for (int z = -1; z <= 1; z++)
+    {
+        [unroll]
+        for (int y = -1; y <= 1; y++)
+        {
+            [unroll]
+            for (int x = -1; x <= 1; x++)
+            {
+                float3 neighbor = float3(x, y, z);
+                float3 randomPoint = Hash3(cell + neighbor);
+                float3 diff = neighbor + randomPoint - localPos;
+                float dist = dot(diff, diff); // squared distance
+                minDist = min(minDist, dist);
+            }
+        }
+    }
+
+    return sqrt(minDist); // true distance
+}
+
+float WorleyFBM(
+    float3 p,
+    int octaves,
+    float persistence,
+    float lacunarity)
+{
+    float value = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+
+    for (int i = 0; i < octaves; i++)
+    {
+        float n = Worley3D(p * frequency);
+
+        // Optional inversion for nicer cloud / smoke patterns
+        n = 1.0 - n;
+
+        value += n * amplitude;
+
+        frequency *= lacunarity;
+        amplitude *= persistence;
+    }
+
+    return value;
+}
 #endif
