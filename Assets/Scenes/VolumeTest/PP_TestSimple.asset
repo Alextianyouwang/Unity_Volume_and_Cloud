@@ -65,7 +65,7 @@ MonoBehaviour:
     m_Value: 1
   EarthRadius:
     m_OverrideState: 1
-    m_Value: 1000
+    m_Value: 2000
   OpticalDepthSamples:
     m_OverrideState: 1
     m_Value: 100
@@ -74,7 +74,7 @@ MonoBehaviour:
     m_Value: 150
   BlendCenter:
     m_OverrideState: 1
-    m_Value: {x: 33.9, y: 0, z: 0}
+    m_Value: {x: -24.2, y: 0, z: 0}
   BlendRaidus:
     m_OverrideState: 1
     m_Value: 209.83
@@ -83,7 +83,7 @@ MonoBehaviour:
     m_Value: 21.2
   EnableDistorsion:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 1
   EnableMask:
     m_OverrideState: 1
     m_Value: 1
@@ -104,16 +104,16 @@ MonoBehaviour:
     m_Value: 10
   AtmosphereDensityMultiplier_1:
     m_OverrideState: 1
-    m_Value: 0.995
+    m_Value: 0.375
   AtmosphereInscatteringTint_1:
     m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   AtmosphereUniformAbsorbsion_1:
     m_OverrideState: 1
-    m_Value: 0.017
+    m_Value: 0.006
   AtmosphereAbsorbsionWeightPerChannel_1:
     m_OverrideState: 1
-    m_Value: {r: 0.17, g: 0.546, b: 1, a: 1}
+    m_Value: {r: 0.2627451, g: 0.54509807, b: 1, a: 1}
   AtmosphereChannelSplit_1:
     m_OverrideState: 1
     m_Value: 1
@@ -143,16 +143,16 @@ MonoBehaviour:
     m_Value: 10
   AerosolsDensityMultiplier_1:
     m_OverrideState: 1
-    m_Value: 0.062
+    m_Value: 0.047
   AerosolsInscatteringTint_1:
     m_OverrideState: 1
     m_Value: {r: 0.09411765, g: 0.043500468, b: 0, a: 1}
   AerosolsUniformAbsorbsion_1:
     m_OverrideState: 1
-    m_Value: 0.546
+    m_Value: 1
   AerosolsAnistropic_1:
     m_OverrideState: 1
-    m_Value: 0.856
+    m_Value: 0.721
   AerosolsDensityMultiplier_2:
     m_OverrideState: 1
     m_Value: 0
