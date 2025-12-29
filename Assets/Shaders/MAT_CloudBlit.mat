@@ -25,7 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CloudGlobalDensityMultiplier: 0.76
+    - _CloudGlobalDensityMultiplier: 0.47
     - _Lacunarity: 0.52
     - _Octave: 3
     - _Persistance: 4.21

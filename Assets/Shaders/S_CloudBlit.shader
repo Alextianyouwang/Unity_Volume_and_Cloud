@@ -13,7 +13,6 @@ Shader "Custom/S_CloudBlit"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
-        #include "../Resources/HL_Noise.hlsl"
         ENDHLSL
 
         Tags { "RenderType"="Opaque" }
@@ -27,6 +26,8 @@ Shader "Custom/S_CloudBlit"
             
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
 
             float3 _BoxMin;
             float3 _BoxMax;
@@ -39,7 +40,9 @@ Shader "Custom/S_CloudBlit"
 
             sampler2D _CameraDepthTexture;
 
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "../Resources/HL_Noise.hlsl"
 
             #define STEP_COUNT 32
             #define STEP_COUNT_SUNRAY 4
@@ -122,7 +125,6 @@ Shader "Custom/S_CloudBlit"
                     float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, samplePoint, mainLightDir);
                     float sunRayStepSize = sunRayIntersection.y / STEP_COUNT_SUNRAY;
                     float sunRayOpticalDepth = 0;
-
                     for (int j = 0; j < STEP_COUNT_SUNRAY; j++)
                     {
                         sunRayDistance += sunRayStepSize;
@@ -130,8 +132,12 @@ Shader "Custom/S_CloudBlit"
 
                         float sunRaylocalDensity = GetLocalDensity(sunRaySamplePoint);
                         sunRayOpticalDepth += sunRayStepSize * sunRaylocalDensity;
+
+                       
                     }
-                    
+                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
+                     half shadow = MainLightRealtimeShadow(shadowCoord);
+     
                     // Transmittance from sun to this sample point
                     float sunRayTransmittance = exp(-sunRayOpticalDepth);
 
@@ -140,7 +146,7 @@ Shader "Custom/S_CloudBlit"
                     float viewRayTransmittance = exp(-viewRayOpticalDepth);
                     
                     // In-scattered light: sunlight reaching this point * density * step * view transmittance
-                    irradiance += sunRayTransmittance * localDensity * stepSize * viewRayTransmittance;
+                    irradiance += sunRayTransmittance * localDensity * stepSize * viewRayTransmittance * shadow;
 
 
 
@@ -149,7 +155,7 @@ Shader "Custom/S_CloudBlit"
 
                 transmittance = exp(-viewRayOpticalDepth);
 
-                return irradiance;
+                return  irradiance ;
             }
  
             float4 Frag (Varyings input) : SV_Target
