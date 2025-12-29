@@ -41,7 +41,8 @@ Shader "Custom/S_CloudBlit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            #define STEP_COUNT 16
+            #define STEP_COUNT 32
+            #define STEP_COUNT_SUNRAY 4
 
             float ConvertToLinearEyeDepth(float depth)
             {
@@ -101,7 +102,6 @@ Shader "Custom/S_CloudBlit"
             float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, out float transmittance) 
             {
                 float viewRayOpticalDepth = 0;
-                float opticalDepth = 0;
                 float stepSize = rayLength / STEP_COUNT;
 
                 Light mainLight = GetMainLight();
@@ -113,42 +113,43 @@ Shader "Custom/S_CloudBlit"
                 for (int i = 0 ; i< STEP_COUNT; i++)
                 {
                     float3 samplePoint = rayOrigin + rayDir * viewRayDistance;
+                    
+                    // Early exit if we've passed the scene depth
+                    if (distance(samplePoint, _WorldSpaceCameraPos) * dot(normalize(viewDirVS), float3(0,0,1)) > depth)
+                        break;
+                    
                     float sunRayDistance = 0;
-                    float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin + rayDir * (i * stepSize), mainLightDir);
-                    float sunRayStepSize = sunRayIntersection.y / STEP_COUNT;
+                    float2 sunRayIntersection = rayBoxDst(_BoxMin, _BoxMax, samplePoint, mainLightDir);
+                    float sunRayStepSize = sunRayIntersection.y / STEP_COUNT_SUNRAY;
                     float sunRayOpticalDepth = 0;
 
-                    float sunRayIrradiance  = 0;
-
-                    for (int j = 0; j < STEP_COUNT; j++)
+                    for (int j = 0; j < STEP_COUNT_SUNRAY; j++)
                     {
-
-                        if (distance (samplePoint, _WorldSpaceCameraPos)* dot(normalize(viewDirVS), float3 (0,0,1)) > depth)
-                            break;
-
-                        sunRayDistance += sunRayStepSize ;
+                        sunRayDistance += sunRayStepSize;
                         float3 sunRaySamplePoint = samplePoint + mainLightDir * sunRayDistance;
 
-                        float sunRaylocalDensity = GetLocalDensity(samplePoint);
+                        float sunRaylocalDensity = GetLocalDensity(sunRaySamplePoint);
                         sunRayOpticalDepth += sunRayStepSize * sunRaylocalDensity;
-                        float sunRayLocalTransmittance = exp(-sunRayOpticalDepth);
-                        sunRayIrradiance += sunRayLocalTransmittance * sunRaylocalDensity * sunRayStepSize;
                     }
+                    
+                    // Transmittance from sun to this sample point
+                    float sunRayTransmittance = exp(-sunRayOpticalDepth);
 
                     float localDensity = GetLocalDensity(samplePoint);
                     viewRayOpticalDepth += localDensity * stepSize;
-                    float viewRayLocalTransmittance = exp(-viewRayOpticalDepth);
-                    irradiance += sunRayIrradiance * viewRayLocalTransmittance * localDensity * stepSize;
+                    float viewRayTransmittance = exp(-viewRayOpticalDepth);
+                    
+                    // In-scattered light: sunlight reaching this point * density * step * view transmittance
+                    irradiance += sunRayTransmittance * localDensity * stepSize * viewRayTransmittance;
 
 
 
                     viewRayDistance += stepSize;
                 }
 
-                transmittance =  exp(-viewRayOpticalDepth);
+                transmittance = exp(-viewRayOpticalDepth);
 
-                return 1- irradiance;
-                return transmittance;    
+                return irradiance;
             }
  
             float4 Frag (Varyings input) : SV_Target
