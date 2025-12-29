@@ -8,7 +8,7 @@ namespace Experimental.Rendering.CloudRendering
 {
     public class CloudRenderingFeaturePass : ScriptableRenderPass
     {
-        private Material _cloudRenderMaterial;
+        private CloudRenderingFeatureSettings _settings;
         public CloudRenderingFeaturePass(string name)
         {
             profilingSampler = new ProfilingSampler(name);
@@ -16,7 +16,7 @@ namespace Experimental.Rendering.CloudRendering
 
         public void SetupMembers(CloudRenderingFeatureSettings settings)
         {
-            _cloudRenderMaterial = settings.CloudRenderingMaterial;
+            _settings = settings;
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -30,7 +30,12 @@ namespace Experimental.Rendering.CloudRendering
             targetDesc.clearBuffer = false;
             destination = renderGraph.CreateTexture(targetDesc);
 
-            RenderGraphUtils.BlitMaterialParameters param = new(resourcesData.activeColorTexture, destination, _cloudRenderMaterial, 0);
+            _settings.CloudRenderingMaterial.SetMatrix("_CameraInverseViewMatrix", cameraData.camera.projectionMatrix.inverse);
+            _settings.CloudRenderingMaterial.SetVector("_BoxMin", _settings.BoxMin);
+            _settings.CloudRenderingMaterial.SetVector("_BoxMax", _settings.BoxMax);
+
+
+            RenderGraphUtils.BlitMaterialParameters param = new(resourcesData.activeColorTexture, destination, _settings.CloudRenderingMaterial, 0);
             renderGraph.AddBlitPass(param , "Cloud Rendering Pass");
             resourcesData.cameraColor = destination;
         }

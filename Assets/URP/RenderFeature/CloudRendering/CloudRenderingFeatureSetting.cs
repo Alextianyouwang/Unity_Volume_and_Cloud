@@ -7,6 +7,8 @@ namespace Experimental.Rendering.CloudRendering
     public class CloudRenderingFeatureSettings
     {
         public Material CloudRenderingMaterial;
+        public Vector3 BoxMin;
+        public Vector3 BoxMax;
     }
 }
 
