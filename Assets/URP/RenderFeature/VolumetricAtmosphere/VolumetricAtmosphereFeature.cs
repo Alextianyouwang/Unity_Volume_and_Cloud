@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+
 public class VolumetricAtmosphereFeature : ScriptableRendererFeature
 {
     public bool showInSceneView = true;
@@ -54,15 +55,10 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         if (!ReadyToEnqueue(renderingData)) return;
+        _volumePass.SetData(_baker, _opticalDepthTex, _blitMat, PrebakedTextureQualitySetting == PrebakedTextureQuality.Realtime);
         renderer.EnqueuePass(_volumePass);
     }
-    public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
-    {
-        if (_opticalDepthTex == null)
-            Create();
-        if (!ReadyToEnqueue(renderingData)) return;
-        _volumePass.SetData(renderer.cameraColorTargetHandle, _baker, _opticalDepthTex, _blitMat, PrebakedTextureQualitySetting == PrebakedTextureQuality.Realtime);
-    }
+
     bool ReadyToEnqueue(RenderingData renderingData)
     {
         CameraType cameraType = renderingData.cameraData.cameraType;
@@ -70,11 +66,15 @@ public class VolumetricAtmosphereFeature : ScriptableRendererFeature
         if (!showInSceneView && cameraType == CameraType.SceneView) return false;
         if (!_baker) return false;
         if (!_blitMat) return false;
+        
+        // Check if volume component exists and is active
+        var volumeSettings = VolumeManager.instance.stack.GetComponent<VolumetricAtmosphereBlendingComponent>();
+        if (volumeSettings == null || !volumeSettings.IsActive()) return false;
+        
         return true;
     }
     protected override void Dispose(bool disposing)
     {
-        _volumePass.Dispose();
         if (!Application.isPlaying)
         {
             CoreUtils.Destroy(_blitMat);

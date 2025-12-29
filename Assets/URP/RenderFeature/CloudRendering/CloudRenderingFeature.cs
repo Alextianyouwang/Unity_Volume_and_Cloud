@@ -19,10 +19,5 @@ namespace Experimental.Rendering.CloudRendering
             _scriptablePass.SetupMembers(settings);
             renderer.EnqueuePass(_scriptablePass);
         }
-
-       // protected override void Dispose(bool disposing)
-       // {
-       //     _scriptablePass.Dispose();
-       // }
     }
 }
