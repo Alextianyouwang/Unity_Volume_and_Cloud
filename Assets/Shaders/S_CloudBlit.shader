@@ -51,7 +51,7 @@
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "../Resources/HL_Noise.hlsl"
 
-            #define STEP_COUNT 32
+            #define STEP_COUNT 64
             #define STEP_COUNT_SUNRAY 4
 
             float ConvertToLinearEyeDepth(float depth)
@@ -106,7 +106,7 @@
 
             float GetLocalDensity(float3 pos)
             {
-                return _CloudGlobalDensityMultiplier * ( smoothstep( 0.2,0.8, WorleyFBM(pos * 0.01, _Octave,_Persistance,_Lacunarity)));
+                return _CloudGlobalDensityMultiplier * ( smoothstep( 0.3,0.8, WorleyFBM(pos * 0.01, _Octave,_Persistance,_Lacunarity)));
                // return _CloudGlobalDensityMultiplier * ( 1 - smoothstep( 0.2,0.8, Worley3D(pos * 0.1)));
             }
 
@@ -160,7 +160,7 @@ float HGPhase(float cosTheta, float g)
 
                 float cosTheta = dot(normalize(viewDirWS), mainLightDir);
                 // Hack
-                float phase = HGPhase(cosTheta, 0.76); 
+                float phase = HGPhase(cosTheta, 0.1); 
 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
@@ -175,12 +175,12 @@ float HGPhase(float cosTheta, float g)
                     
 
                     // Hack
-                    float viewRayTransmittance = Beer(viewRayOpticalDepth * 0.3);
+                    float viewRayTransmittance = Beer(viewRayOpticalDepth);
                     
                     // === Main Directional Light ===
                     float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
                     // Light ray uses BeerPowder for the powder/self-shadowing effect
-                    float sunRayTransmittance = BeerPowder(sunRayOpticalDepth);
+                    float sunRayTransmittance = Beer(sunRayOpticalDepth);
                     
                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
                     half shadow = MainLightRealtimeShadow(shadowCoord);
@@ -203,9 +203,9 @@ float HGPhase(float cosTheta, float g)
                         
                         float3 lightDir = toLight / distanceToLight;
                         
-                        // Distance attenuation (inverse square falloff with range limit)
+
                         float distanceAttenuation = saturate(1.0 - distanceToLight / lightRange);
-                        distanceAttenuation *= distanceAttenuation; // Quadratic falloff
+                        distanceAttenuation *= distanceAttenuation;
                         
                         // March toward the light to calculate optical depth
                         float2 lightRayIntersection = rayBoxDst(_BoxMin, _BoxMax, samplePoint, lightDir);
