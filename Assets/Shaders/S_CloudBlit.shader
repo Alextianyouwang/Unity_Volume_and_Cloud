@@ -111,6 +111,7 @@
             
             }
 
+
             float GetLocalDensity(float3 pos)
             {
                 return _CloudGlobalDensityMultiplier * ( smoothstep( 0.3,0.8, WorleyFBM(pos * 0.01, _Octave,_Persistance,_Lacunarity)));
@@ -148,6 +149,21 @@ float Beer(float d)
     return exp(-d);
 }
 
+void PhaseFunction_float(float costheta, float g, out float phase)
+{
+    float g2 = g * g;
+    float symmetry = (3 * (1 - g2)) / (2 * (2 + g2));
+    phase = (1 + costheta * costheta) / pow(abs(1 + g2 - 2 * g * costheta), 1.5);
+            
+}
+void DuelLobePhaseFunction_float(float costheta, float g1, float g2, float a, out float phase)
+{
+    float phase1;
+    PhaseFunction_float(costheta, g1, phase1);
+    float phase2;
+    PhaseFunction_float(costheta, g2, phase2);
+    phase = a * phase1 + (1 - a) * phase2;
+}
 
 float HGPhase(float cosTheta, float g)
 {
@@ -200,8 +216,9 @@ float MultipleOctaveScattering(float density, float mu)
 
                 float cosTheta = dot(normalize(viewDirWS), mainLightDir);
                 // Hack
-                float phase = PhaseFunction(cosTheta, 0.3); 
-
+                float phase;
+                DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase);
+                phase *=  0.4;
 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {

@@ -70,4 +70,13 @@ float SphereMask(float3 center, float radius, float falloff, float3 position, ou
 
 }
 
+
+void PhaseFunction_float(float costheta, float g, out float phase)
+{
+    float g2 = g * g;
+    float symmetry = (3 * (1 - g2)) / (2 * (2 + g2));
+    phase = (1 + costheta * costheta) / pow(abs(1 + g2 - 2 * g * costheta), 1.5);
+            
+}
+
 #endif
