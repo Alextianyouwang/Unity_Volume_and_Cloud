@@ -200,7 +200,7 @@ float MultipleOctaveScattering(float density, float mu)
 
                 float cosTheta = dot(normalize(viewDirWS), mainLightDir);
                 // Hack
-                float phase = PhaseFunction(cosTheta, 0.2); 
+                float phase = PhaseFunction(cosTheta, 0.3); 
 
 
                 for (int i = 0; i < STEP_COUNT; i++)

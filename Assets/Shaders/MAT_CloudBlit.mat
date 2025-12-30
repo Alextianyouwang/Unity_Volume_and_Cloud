@@ -30,7 +30,7 @@ Material:
     - _Octave: 3
     - _Persistance: 0.43
     m_Colors:
-    - _AmbientDownColor: {r: 0.36165008, g: 0.3848134, b: 0.4056604, a: 0.5}
-    - _AmbientUpColor: {r: 0.5895336, g: 0.60173935, b: 0.6037736, a: 0.5}
+    - _AmbientDownColor: {r: 0.43810073, g: 0.48215556, b: 0.5188679, a: 0.5}
+    - _AmbientUpColor: {r: 0.8396226, g: 0.8396226, b: 0.8396226, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
