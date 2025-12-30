@@ -7,6 +7,8 @@
         _Octave ("Octave", Int) = 5
         _Persistance ("Persistance", Float) = 1
         _Lacunarity ("Lacunarity", Float) = 1
+        _AmbientUpColor ("AmbientUpColor", Color) = (0.5,0.5,0.5,0.5)
+        _AmbientDownColor ("AmbientDownColor", Color) = (0.5,0.5,0.5,0.5)
     }
     SubShader
     {
@@ -28,6 +30,8 @@
             #pragma fragment Frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ EVALUATE_SH_MIXED EVALUATE_SH_VERTEX
+            #pragma multi_compile _ LIGHTMAP_ON
 
             float3 _BoxMin;
             float3 _BoxMax;
@@ -37,6 +41,9 @@
             float _Persistance;
             float _Lacunarity;
             float _Camera_Near, _Camera_Far;
+
+            float4 _AmbientUpColor;
+            float4 _AmbientDownColor;
 
             sampler2D _CameraDepthTexture;
             
@@ -51,7 +58,7 @@
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "../Resources/HL_Noise.hlsl"
 
-            #define STEP_COUNT 64
+            #define STEP_COUNT 32
             #define STEP_COUNT_SUNRAY 4
 
             float ConvertToLinearEyeDepth(float depth)
@@ -132,7 +139,7 @@
 // The (1 - exp(-2d)) term adds extra darkening deep in the cloud
 float BeerPowder(float d)
 {
-    return exp(-d) * (1.0 - exp(-2.0 * d));
+    return exp(-d) * (1 - exp(-2.0 * d));
 }
 
 // Standard Beer's law: used for VIEW ray transmittance
@@ -140,11 +147,44 @@ float Beer(float d)
 {
     return exp(-d);
 }
+
+
 float HGPhase(float cosTheta, float g)
 {
     float g2 = g * g;
     float denom = pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5);
     return (1.0 - g2) / denom;
+}
+
+//https://www.youtube.com/watch?v=Qj_tK_mdRcA
+float MultipleOctaveScattering(float density, float mu)
+{
+    float attenuation       = 0.2;
+    float contribution      = 0.4;
+    float phaseAttenuation  = 0.1;
+
+    const int scatteringOctaves = 4;
+
+    float a = 1.0;
+    float b = 1.0;
+    float c = 1.0;
+    float g = 0.85;
+
+    float luminance = 0.0;
+
+    for (int i = 0; i < scatteringOctaves; i++)
+    {
+        float phaseFunction =PhaseFunction(0.1 * c, mu);
+        float beers = Beer(density * a);
+
+        luminance += b * phaseFunction * beers;
+
+        a *= attenuation;
+        b *= contribution;
+        c *= (1.0 - phaseAttenuation);
+    }
+
+    return luminance;
 }
 
             float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, float3 viewDirWS, out float transmittance) 
@@ -160,7 +200,8 @@ float HGPhase(float cosTheta, float g)
 
                 float cosTheta = dot(normalize(viewDirWS), mainLightDir);
                 // Hack
-                float phase = HGPhase(cosTheta, 0.1); 
+                float phase = PhaseFunction(cosTheta, 0.2); 
+
 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
@@ -180,12 +221,19 @@ float HGPhase(float cosTheta, float g)
                     // === Main Directional Light ===
                     float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
                     // Light ray uses BeerPowder for the powder/self-shadowing effect
-                    float sunRayTransmittance = Beer(sunRayOpticalDepth);
+                    float sunRayTransmittance = BeerPowder(sunRayOpticalDepth);
                     
                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
                     half shadow = MainLightRealtimeShadow(shadowCoord);
-                    
+
+                
+                float heightNorm = saturate((samplePoint.y - _BoxMin.y) / (_BoxMax.y - _BoxMin.y));
+                float3 ambientColor = lerp(_AmbientDownColor,_AmbientUpColor, heightNorm);
+   
+                 //ambientColor = _GlossyEnvironmentColor.rgb
+
                     irradiance += mainLight.color * sunRayTransmittance * localDensity * stepSize * viewRayTransmittance * shadow * phase;
+                     irradiance += ambientColor *  localDensity * stepSize * viewRayTransmittance;
 
                     // === Additional Point Lights (using custom volumetric light data) ===
                     for (int lightIdx = 0; lightIdx < _VolumetricLightCount; lightIdx++)
