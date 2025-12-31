@@ -25,12 +25,12 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CloudGlobalDensityMultiplier: 0.15
+    - _CloudGlobalDensityMultiplier: 0.2
     - _Lacunarity: 2.82
     - _Octave: 3
     - _Persistance: 0.43
     m_Colors:
-    - _AmbientDownColor: {r: 0.43810073, g: 0.48215556, b: 0.5188679, a: 0.5}
-    - _AmbientUpColor: {r: 0.8396226, g: 0.8396226, b: 0.8396226, a: 1}
+    - _AmbientDownColor: {r: 0.4541652, g: 0.48465833, b: 0.509434, a: 0.5}
+    - _AmbientUpColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
