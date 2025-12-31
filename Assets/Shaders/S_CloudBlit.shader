@@ -235,8 +235,7 @@ float MultipleOctaveScattering(float density)
                 DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase_duelLobe);
                 phase_duelLobe *=  0.4;
 
-                // final persepctive phase integral is adjusted to 1 (30 / (2.58 * 2))
-                float phase_baked = BakedPhase(cosTheta) * 5.8;
+                float phase_baked = BakedPhase(cosTheta) ;
                 float phase_baked_forward = BakedPhase(1) ;
 
                 float3 phase = float3 (phase_baked,phase_baked,phase_baked); 
