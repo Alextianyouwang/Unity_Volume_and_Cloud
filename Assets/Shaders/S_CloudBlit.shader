@@ -218,7 +218,7 @@ float MultipleOctaveScattering(float density, float mu)
                 float viewRayDistance = 0;  
                 float3 irradiance = 0;
 
-                float cosTheta = dot(normalize(viewDirWS), mainLightDir);
+                float cosTheta = dot(normalize(viewDirWS),normalize( mainLightDir));
                 // Hack
                 float phase_duelLobe;
                 DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase_duelLobe);
@@ -226,11 +226,12 @@ float MultipleOctaveScattering(float density, float mu)
 
                 // LUT method;
                 float cosTheta01 = 1 - cosTheta * 0.5 + 0.5;
-                float correction = (cosTheta01 - 0.5) * (1 - _CloudPhaseLUT_TexelSize.z) + 0.5;
-                float phase_baked = tex2D(_CloudPhaseLUT, float2 (correction,_CloudPhaseLUT_TexelSize.z * 0.5)).r;
-                phase_baked *= 8;
+                // Idk why have to add 0.504 it should be 0.5 but whatever...
+                float correction = (cosTheta01 - 0.5) * (0.996) + 0.504;
+                float phase_baked = tex2D(_CloudPhaseLUT, float2 (correction,0)).r;
+                phase_baked *= 16;
 
-                float3 phase = float3 (phase_baked,phase_baked,phase_baked) ; 
+                float3 phase = float3 (phase_baked,phase_baked,phase_baked); 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
                     float3 samplePoint = rayOrigin + rayDir * viewRayDistance;
