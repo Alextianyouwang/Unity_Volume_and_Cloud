@@ -182,7 +182,9 @@ float BakedPhase(float cosTheta)
      float cosTheta01 = 1 - cosTheta * 0.5 + 0.5;
      // Idk why have to add 0.504 it should be 0.5 but whatever...
      float correction = (cosTheta01 - 0.5) * (0.996) + 0.504;
-     float phase_baked = tex2D(_CloudPhaseLUT, float2 (correction,0)).r;
+     // Use tex2Dlod instead of tex2D - this is safe to call from loops
+     // tex2D requires gradients which are undefined inside loops and can hang the compiler
+     float phase_baked = tex2Dlod(_CloudPhaseLUT, float4(correction, 0, 0, 0)).r;
      return phase_baked;
 }
 
