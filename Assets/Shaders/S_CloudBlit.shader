@@ -49,6 +49,7 @@
 
             sampler2D _CameraDepthTexture;
             sampler2D _CloudPhaseLUT;
+            float4 _CloudPhaseLUT_TexelSize;
             
             // Custom volumetric light data (passed from C#)
             #define MAX_VOLUMETRIC_LIGHTS 8
@@ -224,10 +225,12 @@ float MultipleOctaveScattering(float density, float mu)
                 phase_duelLobe *=  0.4;
 
                 // LUT method;
-                float phase_baked = tex2D(_CloudPhaseLUT, float2 (cosTheta * 0.5 + 0.5,0)).r;
+                float cosTheta01 = 1 - cosTheta * 0.5 + 0.5;
+                float correction = (cosTheta01 - 0.5) * (1 - _CloudPhaseLUT_TexelSize.z) + 0.5;
+                float phase_baked = tex2D(_CloudPhaseLUT, float2 (correction,_CloudPhaseLUT_TexelSize.z * 0.5)).r;
                 phase_baked *= 8;
 
-                float phase = phase_baked + phase_duelLobe;
+                float3 phase = float3 (phase_baked,phase_baked,phase_baked) ; 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
                     float3 samplePoint = rayOrigin + rayDir * viewRayDistance;

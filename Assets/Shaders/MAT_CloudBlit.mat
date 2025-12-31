@@ -29,10 +29,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CloudGlobalDensityMultiplier: 0.2
+    - _CloudGlobalDensityMultiplier: 0.19
     - _Lacunarity: 2.82
-    - _Octave: 3
-    - _Persistance: 0.43
+    - _Octave: 4.7
+    - _Persistance: 0.35
     m_Colors:
     - _AmbientDownColor: {r: 0.5719117, g: 0.6189597, b: 0.6415094, a: 0.5}
     - _AmbientUpColor: {r: 1, g: 1, b: 1, a: 1}
