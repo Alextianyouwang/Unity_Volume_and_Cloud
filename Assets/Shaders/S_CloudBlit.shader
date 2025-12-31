@@ -176,14 +176,22 @@ float HGPhase(float cosTheta, float g)
     return (1.0 - g2) / denom;
 }
 
+float BakedPhase(float cosTheta) 
+{
+      // LUT method;
+     float cosTheta01 = 1 - cosTheta * 0.5 + 0.5;
+     // Idk why have to add 0.504 it should be 0.5 but whatever...
+     float correction = (cosTheta01 - 0.5) * (0.996) + 0.504;
+     float phase_baked = tex2D(_CloudPhaseLUT, float2 (correction,0)).r;
+     return phase_baked;
+}
+
 //https://www.youtube.com/watch?v=Qj_tK_mdRcA
-float MultipleOctaveScattering(float density, float mu)
+float MultipleOctaveScattering(float density)
 {
     float attenuation       = 0.2;
     float contribution      = 0.4;
     float phaseAttenuation  = 0.1;
-
-    const int scatteringOctaves = 4;
 
     float a = 1.0;
     float b = 1.0;
@@ -191,10 +199,10 @@ float MultipleOctaveScattering(float density, float mu)
     float g = 0.85;
 
     float luminance = 0.0;
-
-    for (int i = 0; i < scatteringOctaves; i++)
+    [unroll]
+    for (int i = 0; i < 4; i++)
     {
-        float phaseFunction =PhaseFunction(0.1 * c, mu);
+        float phaseFunction =BakedPhase(0.1 * c);
         float beers = Beer(density * a);
 
         luminance += b * phaseFunction * beers;
@@ -224,12 +232,9 @@ float MultipleOctaveScattering(float density, float mu)
                 DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase_duelLobe);
                 phase_duelLobe *=  0.4;
 
-                // LUT method;
-                float cosTheta01 = 1 - cosTheta * 0.5 + 0.5;
-                // Idk why have to add 0.504 it should be 0.5 but whatever...
-                float correction = (cosTheta01 - 0.5) * (0.996) + 0.504;
-                float phase_baked = tex2D(_CloudPhaseLUT, float2 (correction,0)).r;
-                phase_baked *= 16;
+                float phase_baked = BakedPhase(cosTheta);
+                // this make sure the total integral is 1, unit square containing the model is approx 40 unit sqr, the integral is about 2.58 unit sqr
+                phase_baked *= 8;
 
                 float3 phase = float3 (phase_baked,phase_baked,phase_baked); 
                 for (int i = 0; i < STEP_COUNT; i++)
