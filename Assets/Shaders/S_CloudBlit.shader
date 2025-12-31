@@ -9,6 +9,8 @@
         _Lacunarity ("Lacunarity", Float) = 1
         _AmbientUpColor ("AmbientUpColor", Color) = (0.5,0.5,0.5,0.5)
         _AmbientDownColor ("AmbientDownColor", Color) = (0.5,0.5,0.5,0.5)
+        _CloudPhaseLUT ("CloudPhaseLUT", 2D) = "white" {}
+
     }
     SubShader
     {
@@ -46,6 +48,7 @@
             float4 _AmbientDownColor;
 
             sampler2D _CameraDepthTexture;
+            sampler2D _CloudPhaseLUT;
             
             // Custom volumetric light data (passed from C#)
             #define MAX_VOLUMETRIC_LIGHTS 8
@@ -216,10 +219,15 @@ float MultipleOctaveScattering(float density, float mu)
 
                 float cosTheta = dot(normalize(viewDirWS), mainLightDir);
                 // Hack
-                float phase;
-                DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase);
-                phase *=  0.4;
+                float phase_duelLobe;
+                DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase_duelLobe);
+                phase_duelLobe *=  0.4;
 
+                // LUT method;
+                float phase_baked = tex2D(_CloudPhaseLUT, float2 (cosTheta * 0.5 + 0.5,0)).r;
+                phase_baked *= 8;
+
+                float phase = phase_baked + phase_duelLobe;
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
                     float3 samplePoint = rayOrigin + rayDir * viewRayDistance;
