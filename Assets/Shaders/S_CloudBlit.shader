@@ -176,7 +176,7 @@ float HGPhase(float cosTheta, float g)
     return (1.0 - g2) / denom;
 }
 
-float BakedPhase(float cosTheta) 
+float3 BakedPhase(float cosTheta) 
 {
       // LUT method;
      float cosTheta01 = 1 - (cosTheta * 0.5 + 0.5);
@@ -184,7 +184,7 @@ float BakedPhase(float cosTheta)
      float correction = (cosTheta01 - 0.5) * (0.996) + 0.5;
      // Use tex2Dlod instead of tex2D - this is safe to call from loops
      // tex2D requires gradients which are undefined inside loops and can hang the compiler
-     float phase_baked = tex2Dlod(_CloudPhaseLUT, float4(correction, 0, 0, 0)).r;
+     float3 phase_baked = tex2Dlod(_CloudPhaseLUT, float4(correction, 0, 0, 0)).rgb;
 
      return phase_baked ;
 }
@@ -235,10 +235,12 @@ float MultipleOctaveScattering(float density)
                 DuelLobePhaseFunction_float (cosTheta, 0.6, -0.5, 0.7, phase_duelLobe);
                 phase_duelLobe *=  0.4;
 
-                float phase_baked = BakedPhase(cosTheta) ;
-                float phase_baked_forward = BakedPhase(1) ;
+                // multiply purely for artistic direction, since we are using single scattering, purly rely on the light intensity is not enough...
+                float3 phase_baked = BakedPhase(cosTheta) * 4;
+                // physically correct
+                float3 phase_baked_forward = BakedPhase(1) ;
 
-                float3 phase = float3 (phase_baked,phase_baked,phase_baked); 
+                float3 phase = phase_baked; 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
                     float3 samplePoint = rayOrigin + rayDir * viewRayDistance;
@@ -250,14 +252,12 @@ float MultipleOctaveScattering(float density)
                     float localDensity = GetLocalDensity(samplePoint);
                     viewRayOpticalDepth += localDensity * stepSize;
                     
-
-                    // Hack
-                    float viewRayTransmittance = Beer(viewRayOpticalDepth) * phase_baked_forward;
+                    float3 viewRayTransmittance = Beer(viewRayOpticalDepth) * phase_baked_forward;
                     
                     // === Main Directional Light ===
                     float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
                     // Light ray uses BeerPowder for the powder/self-shadowing effect
-                    float sunRayTransmittance = BeerPowder(sunRayOpticalDepth) * phase_baked_forward;
+                    float3 sunRayTransmittance = BeerPowder(sunRayOpticalDepth) * phase_baked_forward;
                     
                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
                     half shadow = MainLightRealtimeShadow(shadowCoord);

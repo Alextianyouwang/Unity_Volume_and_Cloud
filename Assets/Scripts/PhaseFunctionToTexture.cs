@@ -4,11 +4,22 @@ using System.IO;
 using UnityEditor;
 #endif
 
+public enum ColorChannel
+{
+    Red,
+    Green,
+    Blue,
+    Alpha
+}
+
 [ExecuteAlways]
 public class PhaseFunctionToTexture : MonoBehaviour
 {
     [Header("Input")]
     public Texture2D targetTexture;
+    
+    [Tooltip("Which color channel to write the phase function to")]
+    public ColorChannel targetChannel = ColorChannel.Red;
 
     public static readonly float[] phaseFunction = { 
     // Row 0-3: 0� - 21.2�
@@ -100,7 +111,9 @@ public class PhaseFunctionToTexture : MonoBehaviour
         for (int x = 0; x < 256; x++)
         {
             float v = Mathf.Clamp01(inputPhaseFunction[x]);
-            targetTexture.SetPixel(x, 0, new Color(v, v, v, 1.0f));
+            Color existingColor = targetTexture.GetPixel(x, 0);
+            Color newColor = ApplyValueToChannel(existingColor, v, targetChannel);
+            targetTexture.SetPixel(x, 0, newColor);
         }
 
         targetTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
@@ -120,11 +133,33 @@ public class PhaseFunctionToTexture : MonoBehaviour
         for (int x = 0; x < 256; x++)
         {
             float v = Mathf.Clamp01(inputPhaseFunction[x]);
-            targetTexture.SetPixel(x, 0, new Color(v, v, v, 1.0f));
+            Color existingColor = targetTexture.GetPixel(x, 0);
+            Color newColor = ApplyValueToChannel(existingColor, v, targetChannel);
+            targetTexture.SetPixel(x, 0, newColor);
         }
 
         targetTexture.Apply(updateMipmaps: false, makeNoLongerReadable: false);
         Debug.Log("Phase function applied to texture (runtime only, not saved to disk).");
 #endif
+    }
+
+    private Color ApplyValueToChannel(Color color, float value, ColorChannel channel)
+    {
+        switch (channel)
+        {
+            case ColorChannel.Red:
+                color.r = value;
+                break;
+            case ColorChannel.Green:
+                color.g = value;
+                break;
+            case ColorChannel.Blue:
+                color.b = value;
+                break;
+            case ColorChannel.Alpha:
+                color.a = value;
+                break;
+        }
+        return color;
     }
 }
