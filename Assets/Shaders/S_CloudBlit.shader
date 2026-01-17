@@ -7,6 +7,8 @@
         _Octave ("Octave", Int) = 5
         _Persistance ("Persistance", Float) = 1
         _Lacunarity ("Lacunarity", Float) = 1
+        _Multiscattering_DensityAttenuation ("Multiscattering DensityAttenuation", Range (0,1)) = 0.5
+        _Multiscattering_PhaseFunctionShift ("Multiscattering DensityAttenuation", Range (0,0.3)) = 0.15
         _AmbientUpColor ("AmbientUpColor", Color) = (0.5,0.5,0.5,0.5)
         _AmbientDownColor ("AmbientDownColor", Color) = (0.5,0.5,0.5,0.5)
         _CloudPhaseLUT ("CloudPhaseLUT", 2D) = "white" {}
@@ -57,6 +59,8 @@
             float4 _VolumetricLightPositions[MAX_VOLUMETRIC_LIGHTS];
             float4 _VolumetricLightColors[MAX_VOLUMETRIC_LIGHTS];
             float _VolumetricLightRanges[MAX_VOLUMETRIC_LIGHTS];
+            float  _Multiscattering_DensityAttenuation;
+            float _Multiscattering_PhaseFunctionShift;
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -144,7 +148,7 @@
 // The (1 - exp(-2d)) term adds extra darkening deep in the cloud
 float BeerPowder(float d)
 {
-    return exp(-d) * (1 - exp(-2.0 * d));
+    return exp(-d) * (1 - exp(-2 * d));
 }
 
 // Standard Beer's law: used for VIEW ray transmittance
@@ -192,35 +196,29 @@ float3 BakedPhase(float cosTheta)
 //https://www.youtube.com/watch?v=Qj_tK_mdRcA
 float MultipleOctaveScattering(float density)
 {
-    float attenuation       = 0.2;
-    float contribution      = 0.4;
-    float phaseAttenuation  = 0.1;
-
     float a = 1.0;
     float b = 1.0;
-    float c = 1.0;
-    float g = 0.85;
+    float c = 0.85;
 
     float luminance = 0.0;
     [unroll]
     for (int i = 0; i < 4; i++)
     {
-        float phaseFunction =BakedPhase(0.1 * c);
+        float phaseFunction =BakedPhase(c);
         float beers = Beer(density * a);
 
         luminance += b * phaseFunction * beers;
 
-        a *= attenuation;
-        b *= contribution;
-        c *= (1.0 - phaseAttenuation);
+        a *= _Multiscattering_DensityAttenuation;
+        b *= 0.5;
+        c -= _Multiscattering_PhaseFunctionShift;
     }
 
     return luminance;
 }
 
-            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, float3 viewDirWS, out float transmittance) 
+            float3 CloudMarching(float3 rayOrigin, float3 rayDir, float rayLength, float depth, float3 viewDirVS, float3 viewDirWS, out float viewRayOpticalDepth) 
             {
-                float viewRayOpticalDepth = 0;
                 float stepSize = rayLength / STEP_COUNT;
 
                 Light mainLight = GetMainLight();
@@ -236,10 +234,8 @@ float MultipleOctaveScattering(float density)
                 phase_duelLobe *=  0.4;
 
                 // multiply purely for artistic direction, since we are using single scattering, purly rely on the light intensity is not enough...
-                float3 phase_baked = BakedPhase(cosTheta) * 4;
-                // physically correct
-                float3 phase_baked_forward = BakedPhase(1) ;
-
+                float3 phase_baked = BakedPhase(cosTheta);
+  
                 float3 phase = phase_baked; 
                 for (int i = 0; i < STEP_COUNT; i++)
                 {
@@ -252,12 +248,12 @@ float MultipleOctaveScattering(float density)
                     float localDensity = GetLocalDensity(samplePoint);
                     viewRayOpticalDepth += localDensity * stepSize;
                     
-                    float3 viewRayTransmittance = Beer(viewRayOpticalDepth) * phase_baked_forward;
+                    float3 viewRayTransmittance = Beer(viewRayOpticalDepth);
                     
                     // === Main Directional Light ===
                     float sunRayOpticalDepth = ResolveLightRayDepth(mainLightDir, samplePoint);
                     // Light ray uses BeerPowder for the powder/self-shadowing effect
-                    float3 sunRayTransmittance = BeerPowder(sunRayOpticalDepth) * phase_baked_forward;
+                    float3 sunRayTransmittance = MultipleOctaveScattering(sunRayOpticalDepth);
                     
                     float4 shadowCoord = TransformWorldToShadowCoord(samplePoint);
                     half shadow = MainLightRealtimeShadow(shadowCoord);
@@ -315,8 +311,6 @@ float MultipleOctaveScattering(float density)
                     viewRayDistance += stepSize;
                 }
 
-                // Final transmittance uses same Beer's law as the loop
-                transmittance = Beer(viewRayOpticalDepth);
 
                 return irradiance;
             }
@@ -335,17 +329,27 @@ float MultipleOctaveScattering(float density)
 
                 float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
                 float distanceToCubeCameraForward = intersection.x * dot(normalize( viewDirVS.xyz), float3 (0,0,1));
-                if (distanceToCubeCameraForward > sceneDepth)
-                    return color;
+                //if (distanceToCubeCameraForward > sceneDepth)
+                //    return color;
 
                 float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
-                float transmittance = 0;
-                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS,viewDirWS, transmittance);
+                float viewRayOpticalDepth = 0;
+                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS,viewDirWS, viewRayOpticalDepth );
 
                 // Standard volume rendering compositing: in-scattered + attenuated background
-
+                // Beer's law for transmittance (how much background shows through)
+                float transmittance = Beer(viewRayOpticalDepth);
+                
+                // Powder term adds extra brightness at cloud edges (the "silver lining" effect)
+                // This modulates the cloud's in-scattered light, NOT the background
+                float powder = 1.0 - exp(-2.0 * viewRayOpticalDepth);
+                
+                // Apply powder effect to cloud radiance (boosts brightness at thin edges)
+                float3 cloudWithPowder = cloudRadiance * powder;
+                
+                // Final composite: cloud (with powder effect) + attenuated background (standard Beer)
                 float3 finalColor = cloudRadiance + color.rgb * transmittance;
-                return float4(finalColor,1);
+                return float4(finalColor, 1);
             }
             
             ENDHLSL
