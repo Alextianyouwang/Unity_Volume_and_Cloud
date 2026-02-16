@@ -3,6 +3,7 @@
 
     Properties
     {
+        _BoxRotation ("BoxRotationInAngle", Float) = 0
         _CloudGlobalDensityMultiplier ("Cloud Global Density Multiplier", Float) = 1.0
         _Octave ("Octave", Int) = 5
         _Persistance ("Persistance", Float) = 1
@@ -61,6 +62,7 @@
             float _VolumetricLightRanges[MAX_VOLUMETRIC_LIGHTS];
             float  _Multiscattering_DensityAttenuation;
             float _Multiscattering_PhaseFunctionShift;
+            float _BoxRotation;
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -68,6 +70,7 @@
 
             #define STEP_COUNT 32
             #define STEP_COUNT_SUNRAY 4
+            #define USE_BOX_ROTATION
 
             float ConvertToLinearEyeDepth(float depth)
             {
@@ -86,6 +89,15 @@
             // If ray misses box, dstInsideBox will be zero.
             float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir)
             {
+                #ifdef USE_BOX_ROTATION
+                    float theta = radians(_BoxRotation);
+                    float3 x = float3 (cos (theta), 0, -sin(theta));
+                    float3 y = float3 (0, 1, 0);
+                    float3 z = float3 (sin (theta), 0, cos(theta));
+                    float3x3 rotationMatrix = float3x3(x, y, z);
+                    rayOrigin = mul(rotationMatrix, rayOrigin);
+                    rayDir = mul(rotationMatrix, rayDir);
+                #endif
                 // Adapted from: http://jcgt.org/published/0007/03/04/
                 float3 t0 = (boundsMin - rayOrigin) / rayDir;
                 float3 t1 = (boundsMax - rayOrigin) / rayDir;
