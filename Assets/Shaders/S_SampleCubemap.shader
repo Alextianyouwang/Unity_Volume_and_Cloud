@@ -35,7 +35,7 @@ Shader "Custom/S_SampleCubemap"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Assets/Shaders/Include/MyCustomBRDF.hlsl"
+            #include "Assets/Shaders/Include/MyCustomBRDF_CubeMapRefraction.hlsl"
 
             struct Attributes
             {
