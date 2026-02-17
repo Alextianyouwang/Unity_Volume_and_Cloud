@@ -71,6 +71,7 @@
             #define STEP_COUNT 32
             #define STEP_COUNT_SUNRAY 4
             #define USE_BOX_ROTATION
+            //#define USE_BOX_FACE_CLIPPING
 
             float ConvertToLinearEyeDepth(float depth)
             {
@@ -98,16 +99,36 @@
                     rayOrigin = mul(rotationMatrix, rayOrigin);
                     rayDir = mul(rotationMatrix, rayDir);
                 #endif
+
+       
                 // Adapted from: http://jcgt.org/published/0007/03/04/
                 float3 t0 = (boundsMin - rayOrigin) / rayDir;
                 float3 t1 = (boundsMax - rayOrigin) / rayDir;
             
                 float3 tmin = min(t0, t1);
                 float3 tmax = max(t0, t1);
+
+
             
                 float dstA = max(max(tmin.x, tmin.y), tmin.z);
                 float dstB = min(tmax.x, min(tmax.y, tmax.z));
             
+                float dstToBox = max(0.0, dstA);
+                float dstInsideBox = max(0.0, dstB - dstToBox);
+
+
+                #ifdef USE_BOX_FACE_CLIPPING
+                    bool clipped = dstToBox  == 0 ? 0 : (dstInsideBox > 0.01); 
+                    float3 hit = dstToBox * rayDir + rayOrigin;
+                       bool hitMinXFace = (tmin.x - hit.x < 0.01) && (rayDir.x > 0);
+
+                    bool window = hit.y < boundsMax.y * 0.5 && hit.y > boundsMin.y * 0.5 && hit.z < boundsMax.z * 0.5 && hit.z > boundsMin.z * 0.5;
+
+                    if (hit.x - boundsMin.x < 0.001 && length(dstInsideBox) != 0 && window)      
+                         clipped = 0;
+   
+                    clip(clipped == 0? 1 : -1);
+                #endif
                 // CASE 1: ray intersects box from outside (0 <= dstA <= dstB)
                 // dstA is distance to nearest intersection, dstB is distance to far intersection
             
@@ -115,9 +136,7 @@
                 // dstA is distance to intersection behind the ray, dstB is distance to forward intersection
             
                 // CASE 3: ray misses box (dstA > dstB)
-            
-                float dstToBox = max(0.0, dstA);
-                float dstInsideBox = max(0.0, dstB - dstToBox);
+           
             
                 return float2(dstToBox, dstInsideBox);
             }
@@ -329,39 +348,51 @@ float MultipleOctaveScattering(float density)
  
             float4 Frag (Varyings input) : SV_Target
             {
+
+
                 float3 rayOrigin = _WorldSpaceCameraPos;
                 float2 uv = input.texcoord;
                 float2 ndc = uv * 2.0 - 1.0;
                 float4 viewDirVS = mul(unity_CameraInvProjection, float4(ndc, 0, -1));
                 float3 viewDirWS = normalize(mul(unity_CameraToWorld, float4 (viewDirVS.xyz,0))).xyz;
-
                 float4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.texcoord).rgba;
                 float sceneDepthNonLinear = tex2D(_CameraDepthTexture, uv).x;
                 float sceneDepth = ConvertToLinearEyeDepth(sceneDepthNonLinear);
 
-                float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
-                float distanceToCubeCameraForward = intersection.x * dot(normalize( viewDirVS.xyz), float3 (0,0,1));
-                //if (distanceToCubeCameraForward > sceneDepth)
-                //    return color;
 
-                float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
-                float viewRayOpticalDepth = 0;
-                float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS,viewDirWS, viewRayOpticalDepth );
+                #ifdef USE_BOX_FACE_CLIPPING
+                    rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
 
-                // Standard volume rendering compositing: in-scattered + attenuated background
-                // Beer's law for transmittance (how much background shows through)
-                float transmittance = Beer(viewRayOpticalDepth);
+                    return color;
+                #else
                 
-                // Powder term adds extra brightness at cloud edges (the "silver lining" effect)
-                // This modulates the cloud's in-scattered light, NOT the background
-                float powder = 1.0 - exp(-2.0 * viewRayOpticalDepth);
-                
-                // Apply powder effect to cloud radiance (boosts brightness at thin edges)
-                float3 cloudWithPowder = cloudRadiance * powder;
-                
-                // Final composite: cloud (with powder effect) + attenuated background (standard Beer)
-                float3 finalColor = cloudRadiance + color.rgb * transmittance;
-                return float4(finalColor, 1);
+            
+
+                    float2 intersection = rayBoxDst(_BoxMin, _BoxMax, rayOrigin, viewDirWS);
+                    float distanceToCubeCameraForward = intersection.x * dot(normalize( viewDirVS.xyz), float3 (0,0,1));
+                    //if (distanceToCubeCameraForward > sceneDepth)
+                    //    return color;
+
+                    float totalRayLength =  min( (sceneDepth - distanceToCubeCameraForward),  intersection.y);
+                    float viewRayOpticalDepth = 0;
+                    float3 cloudRadiance = CloudMarching(rayOrigin + viewDirWS * intersection.x, viewDirWS, totalRayLength, sceneDepth, viewDirVS,viewDirWS, viewRayOpticalDepth );
+
+                    // Standard volume rendering compositing: in-scattered + attenuated background
+                    // Beer's law for transmittance (how much background shows through)
+                    float transmittance = Beer(viewRayOpticalDepth);
+                    
+                    // Powder term adds extra brightness at cloud edges (the "silver lining" effect)
+                    // This modulates the cloud's in-scattered light, NOT the background
+                    float powder = 1.0 - exp(-2.0 * viewRayOpticalDepth);
+                    
+                    // Apply powder effect to cloud radiance (boosts brightness at thin edges)
+                    float3 cloudWithPowder = cloudRadiance * powder;
+                    
+                    // Final composite: cloud (with powder effect) + attenuated background (standard Beer)
+                    float3 finalColor = cloudRadiance + color.rgb * transmittance;
+                    return float4(finalColor, 1);
+                #endif
+
             }
             
             ENDHLSL

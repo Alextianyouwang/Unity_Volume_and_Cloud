@@ -29,7 +29,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BoxRotation: -59.56
+    - _BoxRotation: 26.3
     - _CloudGlobalDensityMultiplier: 0.1
     - _Lacunarity: 3.21
     - _Multiscattering_DensityAttenuation: 0
@@ -39,5 +39,7 @@ Material:
     m_Colors:
     - _AmbientDownColor: {r: 0.5573603, g: 0.6431813, b: 0.7075472, a: 0.5}
     - _AmbientUpColor: {r: 1, g: 1, b: 1, a: 1}
+    - _WindowMax: {r: 2.14, g: 0.7, b: 0, a: 0}
+    - _WindowMin: {r: 9.25, g: 2.48, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

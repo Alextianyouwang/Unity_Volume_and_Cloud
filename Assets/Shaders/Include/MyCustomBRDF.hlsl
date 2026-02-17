@@ -543,3 +543,4 @@ half4 MyCustomBRDF(InputData inputData, SurfaceData surfaceData)
 #endif // MY_CUSTOM_BRDF_INCLUDED
 
 
+
